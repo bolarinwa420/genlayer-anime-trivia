@@ -13,7 +13,7 @@ Two players pick their anime, each get airdropped **20 GOT tokens**, and battle 
 ## Features
 
 - **AI-Generated Questions** — Every question is generated in real-time from the chosen anime using GenLayer's Intelligent Contracts
-- **Token Stakes** — Real GOT tokens on the line. Win = you take their tokens. Quit = half burned, half to opponent
+- **Token Stakes** — Real GOT tokens on the line. Win means you take their tokens. Quit means half burned, half to opponent
 - **Steal Mechanic** — Miss a question and your opponent has 5 seconds to steal your token
 - **Wild Card Round** — Questions 36-40 come from a random anime neither player picked
 - **Streak Burn** — 5 wrong answers in a row burns 1 of your tokens
