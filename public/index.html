@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ANIME TRIVIA DUEL</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #07071a;
+      --card:    #0e0e2a;
+      --border:  #1e1e4a;
+      --p1:      #7c6aff;
+      --p2:      #ff5f82;
+      --gold:    #f59e0b;
+      --correct: #00ffaa;
+      --wrong:   #ff4444;
+      --steal:   #ff9f43;
+      --text:    #e8e8ff;
+      --muted:   #7070a0;
+    }
+
+    body {
+      background-image:
+        linear-gradient(rgba(7,7,26,0.82), rgba(7,7,26,0.88)),
+        url('frieren.webp');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 16px;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    #particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+    #music-bar {
+      position: fixed; bottom: 20px; right: 20px; z-index: 100;
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(10,10,30,0.85); border: 1px solid var(--p1);
+      border-radius: 30px; padding: 8px 14px;
+      backdrop-filter: blur(10px); max-width: 280px;
+    }
+    #music-bar button {
+      background: none; border: none; color: var(--text);
+      font-size: 16px; cursor: pointer; padding: 2px 4px; transition: color 0.2s;
+    }
+    #music-bar button:hover { color: var(--p1); }
+    #music-title {
+      font-size: 11px; color: var(--muted); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; max-width: 160px;
+    }
+
+    /* ── GenLayer badge ── */
+    #gl-badge {
+      position: fixed; bottom: 20px; left: 20px; z-index: 100;
+      display: flex; align-items: center; gap: 6px; text-decoration: none;
+      background: rgba(10,10,30,0.85); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 30px; padding: 7px 13px;
+      backdrop-filter: blur(10px); transition: border-color 0.2s;
+    }
+    #gl-badge:hover { border-color: var(--p1); }
+    #gl-badge img { width: 24px; height: 24px; object-fit: contain; filter: invert(1) brightness(2); }
+    #gl-badge span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+    /* ── Help button ── */
+    #help-btn {
+      position: fixed; top: 20px; right: 20px; z-index: 100;
+      width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--border);
+      background: rgba(10,10,30,0.85); color: var(--muted); font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(10px); transition: all 0.2s;
+    }
+    #help-btn:hover { border-color: var(--p1); color: var(--text); }
+
+    /* ── How-to modal ── */
+    #modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 300;
+      background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    #modal-overlay.active { display: flex; }
+    .modal-box {
+      background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+      padding: 32px; max-width: 560px; width: 100%; max-height: 80vh; overflow-y: auto;
+    }
+    .modal-box h2 { font-family: 'Orbitron', sans-serif; font-size: 20px; color: var(--p1); margin-bottom: 20px; }
+    .modal-box h3 { font-size: 13px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; margin: 18px 0 8px; }
+    .modal-box p, .modal-box li { font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 4px; }
+    .modal-box ul { padding-left: 20px; }
+    .modal-close {
+      float: right; background: none; border: none; color: var(--muted);
+      font-size: 22px; cursor: pointer; margin-top: -8px;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    /* ── screens ── */
+    .screen { display: none; width: 100%; max-width: 860px; padding: 24px 20px; position: relative; z-index: 1; }
+    .screen.active { display: block; animation: fadeIn 0.4s ease; }
+
+    @keyframes fadeIn  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    @keyframes pulse   { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+    @keyframes float   { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-22px) rotate(2deg); } }
+    @keyframes glow    { 0%,100% { text-shadow: 0 0 20px currentColor; } 50% { text-shadow: 0 0 60px currentColor; } }
+    @keyframes spin    { to { transform: rotate(360deg); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
+    @keyframes celebrate {
+      0%   { transform: translateY(0) scale(1);   opacity: 1; }
+      100% { transform: translateY(-80px) scale(0.5); opacity: 0; }
+    }
+
+    /* ── shared components ── */
+    .title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(26px, 5vw, 52px);
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--p1), var(--p2), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-align: center;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      text-align: center; color: var(--muted); font-size: 13px;
+      letter-spacing: 3px; text-transform: uppercase; margin-bottom: 40px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 14px 28px; border: none; border-radius: 12px;
+      font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 1px; text-decoration: none;
+    }
+    .btn-p1      { background: linear-gradient(135deg, var(--p1), #5b4bd4); color: white; }
+    .btn-p1:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,106,255,0.4); }
+    .btn-p2      { background: linear-gradient(135deg, var(--p2), #cc3366); color: white; }
+    .btn-p2:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,95,130,0.4); }
+    .btn-gold    { background: linear-gradient(135deg, var(--gold), #d97706); color: #1a1000; }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,158,11,0.4); }
+    .btn-ghost   { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--p1); color: var(--text); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    .btn-full { width: 100%; }
+
+    .input-group { margin-bottom: 20px; }
+    .input-group label { display: block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .input-group input {
+      width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 16px; color: var(--text);
+      font-family: 'Rajdhani', sans-serif; font-size: 16px; transition: border-color 0.2s;
+    }
+    .input-group input:focus { outline: none; border-color: var(--p1); }
+    .input-group input::placeholder { color: var(--muted); }
+
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px; color: var(--muted);
+      cursor: pointer; font-size: 14px; margin-bottom: 24px; transition: color 0.2s;
+    }
+    .back-btn:hover { color: var(--text); }
+
+    .form-layout {
+      display: grid; grid-template-columns: 1fr 190px; gap: 24px; align-items: start;
+    }
+    @media (max-width: 580px) { .form-layout { grid-template-columns: 1fr; } }
+
+    .anime-preview {
+      border-radius: 12px; overflow: hidden; aspect-ratio: 2/3;
+      background: var(--card); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 12px; text-align: center; padding: 12px;
+    }
+    .anime-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    /* ── HOME ── */
+    #screen-home { text-align: center; }
+    .home-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .home-btn  { padding: 22px 44px; font-size: 15px; border-radius: 16px; min-width: 210px; }
+    .btn-ai { background: linear-gradient(135deg, #00c896, #00876a); color: white; }
+    .btn-ai:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,200,150,0.4); }
+
+    /* ── Difficulty pills ── */
+    .diff-row { display: flex; gap: 8px; justify-content: center; margin-top: 20px; }
+    .diff-pill {
+      padding: 8px 20px; border: 1px solid var(--border); border-radius: 20px;
+      font-size: 12px; font-family: 'Orbitron', sans-serif; cursor: pointer;
+      background: rgba(255,255,255,0.03); transition: all 0.15s;
+    }
+    .diff-pill:hover { border-color: #00c896; color: #00c896; }
+    .diff-pill.selected { background: rgba(0,200,150,0.15); border-color: #00c896; color: #00c896; }
+    .ai-badge {
+      display: inline-block; background: rgba(0,200,150,0.12); border: 1px solid #00c896;
+      color: #00c896; border-radius: 8px; padding: 4px 12px; font-size: 11px; margin-bottom: 8px;
+    }
+
+    /* ── WAITING ── */
+    #screen-waiting { text-align: center; }
+    .room-code-card {
+      background: var(--card); border: 2px solid var(--p1); border-radius: 20px;
+      padding: 32px; margin: 0 auto 28px; max-width: 420px;
+    }
+    .room-code-label { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+    .room-code-val {
+      font-family: 'Orbitron', sans-serif; font-size: 52px; font-weight: 900;
+      letter-spacing: 10px; color: var(--p1); margin-bottom: 16px;
+    }
+    .waiting-cover {
+      width: 150px; height: 220px; border-radius: 12px; overflow: hidden;
+      margin: 0 auto 14px; border: 2px solid var(--p1); background: var(--card);
+      display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12px;
+    }
+    .waiting-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .dot-pulse { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--p1); margin-right: 8px; animation: pulse 1.4s infinite; }
+
+    /* ── LOADING ── */
+    #screen-loading { text-align: center; padding-top: 80px; }
+    #loading-tip { transition: opacity 0.3s ease; }
+    .spinner {
+      width: 56px; height: 56px; border: 3px solid var(--border); border-top-color: var(--p1);
+      border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 24px;
+    }
+
+    /* ── GAME ── */
+    .room-badge { text-align: center; font-size: 11px; color: var(--muted); letter-spacing: 2px; margin-bottom: 14px; }
+
+    .game-panels { display: flex; gap: 10px; margin-bottom: 16px; }
+    .player-panel {
+      flex: 1; border-radius: 12px; overflow: hidden; border: 2px solid transparent;
+      position: relative; min-height: 110px;
+    }
+    .panel-me  { border-color: var(--p1); }
+    .panel-opp { border-color: var(--p2); }
+    .panel-bg  { position: absolute; inset: 0; background-size: cover; background-position: center top; filter: brightness(0.28); }
+    .panel-body { position: relative; padding: 12px 14px; }
+    .panel-role { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+    .panel-anime { font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .panel-me  .panel-anime { color: var(--p1); }
+    .panel-opp .panel-anime { color: var(--p2); }
+    .panel-bal { font-size: 22px; font-weight: 700; }
+    .panel-qnum { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .vs-sep { display: flex; align-items: center; justify-content: center; font-family: 'Orbitron', sans-serif; font-size: 15px; font-weight: 900; color: var(--gold); min-width: 36px; }
+
+    .powerup-row { display: flex; gap: 8px; justify-content: center; min-height: 32px; margin-bottom: 12px; flex-wrap: wrap; }
+    .pu-badge { background: rgba(245,158,11,0.15); border: 1px solid var(--gold); color: var(--gold); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 700; }
+
+    .q-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 14px; }
+    .q-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .q-label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    .timer-wrap { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .timer-fill { height: 100%; background: linear-gradient(90deg, var(--correct), var(--gold)); border-radius: 3px; transition: width 1s linear, background 0.4s; }
+    .timer-fill.urgent { background: linear-gradient(90deg, var(--wrong), #ff6b00); }
+    .timer-num { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; min-width: 26px; text-align: right; }
+    .q-text { font-size: clamp(16px, 2.5vw, 20px); font-weight: 600; line-height: 1.5; margin-bottom: 24px; }
+
+    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 480px) { .options { grid-template-columns: 1fr; } }
+    .opt {
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 12px;
+      padding: 15px 14px; color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 15px;
+      font-weight: 600; cursor: pointer; text-align: left; transition: all 0.15s;
+      display: flex; gap: 10px; align-items: flex-start;
+    }
+    .opt:hover:not(:disabled) { border-color: var(--p1); background: rgba(124,106,255,0.1); transform: translateX(4px); }
+    .opt.correct  { border-color: var(--correct); background: rgba(0,255,170,0.1); color: var(--correct); }
+    .opt.wrong    { border-color: var(--wrong); background: rgba(255,68,68,0.1); color: var(--wrong); }
+    .opt.selected { border-color: var(--p1); background: rgba(124,106,255,0.18); color: var(--text); }
+    .opt-key { font-family: 'Orbitron', sans-serif; font-size: 10px; font-weight: 700; opacity: 0.55; min-width: 18px; margin-top: 2px; }
+
+    .result-banner {
+      display: none; text-align: center; padding: 15px; border-radius: 12px;
+      font-family: 'Orbitron', sans-serif; font-size: 17px; font-weight: 700; margin-top: 14px;
+    }
+    .result-banner.ok     { background: rgba(0,255,170,0.1); border: 1px solid var(--correct); color: var(--correct); }
+    .result-banner.bad    { background: rgba(255,68,68,0.1); border: 1px solid var(--wrong); color: var(--wrong); }
+    .result-banner.fire   { background: rgba(255,159,67,0.1); border: 1px solid var(--steal); color: var(--steal); }
+
+    .next-btn {
+      margin-top: 10px; display: inline-block;
+      background: rgba(255,255,255,0.1); border: 1px solid currentColor;
+      border-radius: 8px; color: inherit;
+      font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700;
+      padding: 7px 20px; cursor: pointer; letter-spacing: 1px;
+      transition: background 0.15s;
+    }
+    .next-btn:hover { background: rgba(255,255,255,0.25); }
+    .next-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── STEAL OVERLAY ── */
+    #steal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 60;
+      background: rgba(0,0,0,0.88); backdrop-filter: blur(8px);
+      align-items: center; justify-content: center;
+    }
+    #steal-overlay.active { display: flex; }
+    .steal-box {
+      background: var(--card); border: 2px solid var(--steal); border-radius: 20px;
+      padding: 32px; max-width: 600px; width: 92%;
+      box-shadow: 0 0 60px rgba(255,159,67,0.25); animation: slideUp 0.35s ease;
+    }
+    .steal-title { font-family: 'Orbitron', sans-serif; font-size: 22px; font-weight: 900; color: var(--steal); text-align: center; margin-bottom: 6px; }
+    .steal-sub   { text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 22px; }
+
+    /* ── END ── */
+    #screen-end { text-align: center; }
+    .end-img { width: 190px; height: 280px; object-fit: cover; border-radius: 16px; margin: 0 auto 22px; display: block; animation: float 4s ease-in-out infinite; border: 3px solid var(--gold); box-shadow: 0 0 50px rgba(245,158,11,0.35); }
+    .end-result { font-family: 'Orbitron', sans-serif; font-size: 44px; font-weight: 900; margin-bottom: 8px; animation: glow 2.5s ease-in-out infinite; }
+    .end-result.win  { color: var(--gold); }
+    .end-result.lose { color: var(--muted); }
+    .end-result.tie  { color: var(--p1); }
+    .end-scores { display: flex; gap: 20px; justify-content: center; margin: 22px 0 30px; flex-wrap: wrap; }
+    .end-score { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px 30px; min-width: 120px; }
+    .end-score.winner { border-color: var(--gold); }
+    .end-score .lbl { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .end-score .val { font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 700; color: var(--gold); }
+    .end-delta { font-size: 13px; margin-top: 4px; }
+    .end-delta.pos { color: var(--correct); }
+    .end-delta.neg { color: var(--wrong); }
+    .end-league-rank { font-size: 13px; color: var(--gold); margin: 8px 0 16px; }
+
+    /* Celebrate particles */
+    .celebrate-particle {
+      position: fixed; z-index: 500; pointer-events: none;
+      width: 8px; height: 8px; border-radius: 50%;
+      animation: celebrate 1s ease-out forwards;
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+      background: #1a1a3a; border: 1px solid var(--border); border-radius: 12px;
+      padding: 12px 24px; z-index: 200; transition: transform 0.3s ease;
+      font-size: 14px; white-space: nowrap; pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.toast-warn   { border-color: #d97706; }
+    #toast.toast-danger { border-color: var(--wrong); }
+    #toast.toast-gold   { border-color: var(--gold); }
+  </style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+<div id="yt-container" style="position:fixed;bottom:-300px;left:-300px;width:1px;height:1px;opacity:0;pointer-events:none;"></div>
+
+<!-- Help button -->
+<button id="help-btn" onclick="openHelp()" title="How to Play">?</button>
+
+<!-- GenLayer badge -->
+<a href="https://genlayer.com" target="_blank" id="gl-badge">
+  <img src="genlayer-logo.jpg" alt="GenLayer" />
+  <span>Powered by GenLayer</span>
+</a>
+
+<!-- Music bar -->
+<div id="music-bar">
+  <button id="music-prev" title="Previous">⏮</button>
+  <button id="music-play" title="Play/Pause">🎵</button>
+  <button id="music-next" title="Next">⏭</button>
+  <span id="music-title">♪ Press play for anime music</span>
+</div>
+
+<div id="toast"></div>
+
+<!-- ══ HOW TO PLAY MODAL ══════════════════════════════════════════════════════ -->
+<div id="modal-overlay" onclick="closeHelpOutside(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeHelp()">✕</button>
+    <h2>🎮 How to Play</h2>
+
+    <h3>Token Economy</h3>
+    <ul>
+      <li>Both players start with <strong>20 GOT</strong> tokens</li>
+      <li>Miss a question → opponent gets a <strong>5-second steal window</strong></li>
+      <li>Steal success → you gain 1 GOT from them</li>
+      <li>Steal fail → their token is <strong>burned</strong> permanently</li>
+      <li>5 wrong in a row → 1 of your tokens is <strong>burned</strong></li>
+      <li>Game winner gets <strong>+5 GOT bonus</strong> minted</li>
+    </ul>
+
+    <h3>Power-ups (every 3 correct in a row)</h3>
+    <ul>
+      <li>🛡️ <strong>SHIELD</strong> — blocks one steal attempt</li>
+      <li>🎯 <strong>SNIPE</strong> — force opponent's next question from your anime</li>
+      <li>✌️ <strong>DOUBLE DOWN</strong> — next steal wins 2 tokens</li>
+      <li>Cycle repeats: Shield → Snipe → Double Down → Shield…</li>
+    </ul>
+
+    <h3>Wild Card Round (Q36–40)</h3>
+    <ul>
+      <li>Last 5 questions are from a <strong>random anime</strong> nobody chose</li>
+      <li>Neither player has home-field advantage — pure knowledge test</li>
+    </ul>
+
+    <h3>Timer Rules</h3>
+    <ul>
+      <li><strong>15 seconds</strong> to answer each question</li>
+      <li><strong>5 seconds</strong> to attempt a steal</li>
+      <li>Server auto-submits blank if you don't answer in time</li>
+    </ul>
+
+    <h3>Forfeit / Rage Quit</h3>
+    <ul>
+      <li>If you go <strong>90 seconds</strong> without any activity, you're counted as forfeited</li>
+      <li>Quitter's tokens: half to opponent, half burned</li>
+      <li>Opponent gets +5 GOT win bonus</li>
+    </ul>
+
+    <h3>League System</h3>
+    <ul>
+      <li>Create or join a <strong>weekly league</strong> from the lobby</li>
+      <li>League games track W/L and net GOT earned on the leaderboard</li>
+      <li>Pass your league code to friends so they can join</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══ HOME ══════════════════════════════════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <div class="title">ANIME TRIVIA DUEL</div>
+  <div class="subtitle">⚔️ Stake GOT tokens · Steal from rivals · Rule the anime world</div>
+  <div class="home-btns">
+    <button class="btn btn-p1 home-btn" onclick="showScreen('screen-create')">⚔️ CREATE DUEL</button>
+    <button class="btn btn-p2 home-btn" onclick="showScreen('screen-join')">🔗 JOIN DUEL</button>
+    <button class="btn btn-ai home-btn" onclick="showScreen('screen-ai')">🤖 VS AI</button>
+    <a href="lobby.html" class="btn btn-ghost home-btn">🎌 LOBBY</a>
+  </div>
+</div>
+
+<!-- ══ CREATE ════════════════════════════════════════════════════════════════ -->
+<div id="screen-create" class="screen">
+  <div class="back-btn" onclick="showScreen('screen-home')">← Back</div>
+  <div class="title" style="font-size:28px; margin-bottom:4px;">CREATE DUEL</div>
+  <div class="subtitle" style="margin-bottom:28px;">You are Player 1 · Share your room code with your opponent</div>
+
+  <div class="form-layout">
+    <div>
+      <div class="input-group">
+        <label>Your Wallet Address</label>
+        <input id="c-addr" type="text" placeholder="0x..." />
+      </div>
+      <div class="input-group">
+        <label>Your Anime</label>
+        <input id="c-anime" type="text" placeholder="e.g. Naruto, One Piece..." oninput="onAnimeType('c')" />
+      </div>
+      <div class="input-group">
+        <label>League Code (optional)</label>
+        <input id="c-league" type="text" placeholder="e.g. ALPHA2026" style="text-transform:uppercase;" />
+      </div>
+      <button class="btn btn-p1 btn-full" id="c-btn" onclick="doCreate()">⚔️ START DUEL</button>
+    </div>
+    <div>
+      <div class="anime-preview" id="c-preview"><span>Type anime name<br>to preview</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ WAITING ═══════════════════════════════════════════════════════════════ -->
+<div id="screen-waiting" class="screen">
+  <div class="title" style="font-size:28px; margin-bottom:24px;">WAITING FOR OPPONENT</div>
+
+  <div class="room-code-card">
+    <div class="room-code-label">Room Code</div>
+    <div class="room-code-val" id="w-code">——</div>
+    <button class="btn btn-ghost" onclick="copyCode()" style="padding:8px 20px; font-size:12px;">📋 Copy Code</button>
+  </div>
+
+  <div class="waiting-cover" id="w-cover"><span>No image</span></div>
+  <div style="font-family:'Orbitron',sans-serif; font-size:14px; margin-bottom:4px;" id="w-anime-name"></div>
+  <div style="font-size:13px; color:var(--muted); margin-bottom:28px;">You · Player 1</div>
+
+  <div style="font-size:15px; margin-bottom:10px;">
+    <span class="dot-pulse"></span>Waiting for your opponent to join…
+  </div>
+  <div style="font-size:12px; color:var(--muted);">Share the room code above — they enter it on the Join screen</div>
+</div>
+
+<!-- ══ JOIN ══════════════════════════════════════════════════════════════════ -->
+<div id="screen-join" class="screen">
+  <div class="back-btn" onclick="showScreen('screen-home')">← Back</div>
+  <div class="title" style="font-size:28px; margin-bottom:4px;">JOIN DUEL</div>
+  <div class="subtitle" style="margin-bottom:28px;">Enter the room code your opponent shared with you</div>
+
+  <div class="form-layout">
+    <div>
+      <div class="input-group">
+        <label>Room Code</label>
+        <input id="j-code" type="text" placeholder="ABC123" maxlength="6"
+          style="text-transform:uppercase; font-family:'Orbitron',sans-serif; letter-spacing:5px; font-size:22px;" />
+      </div>
+      <div class="input-group">
+        <label>Your Wallet Address</label>
+        <input id="j-addr" type="text" placeholder="0x..." />
+      </div>
+      <div class="input-group">
+        <label>Your Anime</label>
+        <input id="j-anime" type="text" placeholder="e.g. Attack on Titan…" oninput="onAnimeType('j')" />
+      </div>
+      <div class="input-group">
+        <label>League Code (optional)</label>
+        <input id="j-league" type="text" placeholder="e.g. ALPHA2026" style="text-transform:uppercase;" />
+      </div>
+      <button class="btn btn-p2 btn-full" id="j-btn" onclick="doJoin()">🔗 JOIN DUEL</button>
+    </div>
+    <div>
+      <div class="anime-preview" id="j-preview"><span>Type anime name<br>to preview</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VS AI ═══════════════════════════════════════════════════════════════════ -->
+<div id="screen-ai" class="screen">
+  <div class="back-btn" onclick="showScreen('screen-home')">← Back</div>
+  <div class="title" style="font-size:28px; margin-bottom:4px;">VS AI</div>
+  <div class="subtitle" style="margin-bottom:28px;">Test your knowledge against the bot · No opponent needed</div>
+
+  <div class="form-layout">
+    <div>
+      <div class="input-group">
+        <label>Your Wallet Address</label>
+        <input id="ai-addr" type="text" placeholder="0x..." />
+      </div>
+      <div class="input-group">
+        <label>Your Anime</label>
+        <input id="ai-anime" type="text" placeholder="e.g. Naruto, One Piece..." oninput="onAnimeType('ai')" />
+      </div>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:10px;">AI Difficulty</div>
+        <div class="diff-row">
+          <div class="diff-pill selected" data-diff="easy"    onclick="selectDiff('easy')">😴 Easy (40%)</div>
+          <div class="diff-pill"          data-diff="normal"  onclick="selectDiff('normal')">🤖 Normal (60%)</div>
+          <div class="diff-pill"          data-diff="hard"    onclick="selectDiff('hard')">😈 Hard (82%)</div>
+        </div>
+      </div>
+      <div class="ai-badge">🤖 AI plays Dragon Ball Z / HxH / FMA or similar</div>
+      <button class="btn btn-ai btn-full" id="ai-btn" onclick="doCreateAI()">🤖 FIGHT THE BOT</button>
+    </div>
+    <div>
+      <div class="anime-preview" id="ai-preview"><span>Type anime name<br>to preview</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOADING ════════════════════════════════════════════════════════════════ -->
+<div id="screen-loading" class="screen">
+  <div class="title" style="font-size:26px; margin-bottom:14px;">⚔️ PREPARING YOUR DUEL</div>
+  <div class="spinner"></div>
+  <div style="color:var(--muted); font-size:14px; margin-bottom:24px;" id="loading-msg">Loading your first question…</div>
+
+  <div style="
+    background:rgba(124,106,255,0.08); border:1px solid var(--border);
+    border-radius:14px; padding:20px 28px; max-width:460px; margin:0 auto;
+    font-size:13px; color:var(--muted); line-height:1.8; text-align:left;
+  ">
+    <div style="color:var(--p1); font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px; margin-bottom:10px;">⛓ WHY THE WAIT?</div>
+    Your questions are being <strong style="color:var(--text);">generated by AI on the GenLayer blockchain</strong>.<br>
+    Multiple validator nodes must reach consensus before a question is confirmed — this takes <strong style="color:var(--text);">30–60 seconds</strong> per call.<br><br>
+    <div style="color:var(--gold); font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:2px; margin-bottom:8px;">⚡ DID YOU KNOW?</div>
+    <div id="loading-tip" style="color:var(--text);"></div>
+  </div>
+</div>
+
+<!-- ══ GAME ═══════════════════════════════════════════════════════════════════ -->
+<div id="screen-game" class="screen">
+  <div class="room-badge">ROOM: <span id="g-room-code" style="color:var(--p1); font-family:'Orbitron',sans-serif;"></span></div>
+
+  <div class="game-panels">
+    <div class="player-panel panel-me">
+      <div class="panel-bg" id="bg-me"></div>
+      <div class="panel-body">
+        <div class="panel-role">YOU</div>
+        <div class="panel-anime" id="g-me-anime"></div>
+        <div class="panel-bal">💎 <span id="g-me-bal">20</span> GOT</div>
+        <div class="panel-qnum">Question <span id="g-me-q">1</span>/40</div>
+      </div>
+    </div>
+
+    <div class="vs-sep">VS</div>
+
+    <div class="player-panel panel-opp">
+      <div class="panel-bg" id="bg-opp"></div>
+      <div class="panel-body">
+        <div class="panel-role">OPPONENT</div>
+        <div class="panel-anime" id="g-opp-anime"></div>
+        <div class="panel-bal">💎 <span id="g-opp-bal">20</span> GOT</div>
+        <div class="panel-qnum">Question <span id="g-opp-q">1</span>/40</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="powerup-row" id="pu-row"></div>
+
+  <!-- Wild Card Round banner (hidden until Q36+) -->
+  <div id="wildcard-banner" style="
+    display:none; text-align:center; padding:10px 20px; margin-bottom:12px;
+    background:rgba(245,158,11,0.12); border:1px solid var(--gold);
+    border-radius:12px; font-family:'Orbitron',sans-serif;
+    font-size:13px; font-weight:700; color:var(--gold); letter-spacing:1px;
+  "></div>
+
+  <div class="q-card">
+    <div class="q-meta">
+      <div class="q-label">Q <span id="g-qnum">1</span>/40</div>
+      <div class="timer-wrap"><div class="timer-fill" id="timer-fill"></div></div>
+      <div class="timer-num" id="timer-num">15</div>
+    </div>
+    <div class="q-text" id="g-q-text">Loading…</div>
+    <div class="options" id="g-opts"></div>
+  </div>
+
+  <div class="result-banner" id="g-result"></div>
+</div>
+
+<!-- ══ STEAL OVERLAY ══════════════════════════════════════════════════════════ -->
+<div id="steal-overlay">
+  <div class="steal-box">
+    <div class="steal-title">🔥 STEAL OPPORTUNITY!</div>
+    <div class="steal-sub">Your opponent missed this — answer correctly to steal their token!</div>
+    <div class="q-meta" style="margin-bottom:14px;">
+      <div class="q-label" style="color:var(--steal);">STEAL</div>
+      <div class="timer-wrap"><div class="timer-fill urgent" id="steal-timer-fill"></div></div>
+      <div class="timer-num" id="steal-timer-num" style="color:var(--steal);">5</div>
+    </div>
+    <div class="q-text" id="steal-q-text" style="margin-bottom:16px;"></div>
+    <div class="options" id="steal-opts"></div>
+    <div class="result-banner" id="steal-result"></div>
+  </div>
+</div>
+
+<!-- ══ END ════════════════════════════════════════════════════════════════════ -->
+<div id="screen-end" class="screen">
+  <img id="end-img" class="end-img" src="" alt="" style="display:none;" />
+  <div class="end-result" id="end-result-text"></div>
+  <div style="font-size:17px; color:var(--muted); margin-bottom:22px;" id="end-sub"></div>
+  <div class="end-scores">
+    <div class="end-score" id="end-me">
+      <div class="lbl">YOU</div>
+      <div class="val" id="end-me-val">—</div>
+      <div class="end-delta" id="end-me-delta"></div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;">GOT</div>
+    </div>
+    <div class="end-score" id="end-opp">
+      <div class="lbl">OPPONENT</div>
+      <div class="val" id="end-opp-val">—</div>
+      <div class="end-delta" id="end-opp-delta"></div>
+      <div style="font-size:11px; color:var(--muted); margin-top:4px;">GOT</div>
+    </div>
+  </div>
+  <div class="end-league-rank" id="end-league-rank" style="display:none;"></div>
+  <button class="btn btn-gold" onclick="resetAndHome()" style="font-size:15px; padding:16px 42px;">PLAY AGAIN</button>
+</div>
+
+<script>
+// ══ SOUND (Web Audio API) ═════════════════════════════════════════════════════
+function beep(freq, duration, type = "sine") {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    setTimeout(() => { osc.stop(); ctx.close(); }, duration + 50);
+  } catch {}
+}
+
+function soundCorrect() { beep(880, 150); }
+function soundWrong()   { beep(200, 300, "sawtooth"); }
+function soundSteal()   { beep(660, 100); setTimeout(() => beep(880, 100), 120); }
+function soundBurn()    { beep(100, 500, "square"); }
+
+// ══ PARTICLES ═══════════════════════════════════════════════════════════════
+(function () {
+  const cvs = document.getElementById("particles");
+  const ctx = cvs.getContext("2d");
+  const COLORS = ["#7c6aff","#ff5f82","#f59e0b","#c084fc","#fb7185"];
+  const petals = Array.from({ length: 45 }, () => ({
+    x: Math.random() * innerWidth, y: Math.random() * innerHeight,
+    r: Math.random() * 6 + 3, color: COLORS[Math.random() * 5 | 0],
+    vx: (Math.random() - 0.5) * 0.8, vy: Math.random() * 1.2 + 0.3,
+    rot: Math.random() * Math.PI * 2, rotV: (Math.random() - 0.5) * 0.04,
+    alpha: Math.random() * 0.6 + 0.2,
+  }));
+  function resize() { cvs.width = innerWidth; cvs.height = innerHeight; }
+  resize(); window.addEventListener("resize", resize);
+  (function draw() {
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    for (const p of petals) {
+      ctx.save(); ctx.globalAlpha = p.alpha; ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.beginPath(); ctx.ellipse(0, 0, p.r, p.r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fillStyle = p.color; ctx.fill(); ctx.restore();
+      p.x += p.vx; p.y += p.vy; p.rot += p.rotV;
+      if (p.y > cvs.height + 20) { p.y = -20; p.x = Math.random() * cvs.width; }
+    }
+    requestAnimationFrame(draw);
+  })();
+})();
+
+// ══ CELEBRATE EFFECT ══════════════════════════════════════════════════════════
+function launchCelebrate() {
+  const colors = ["#f59e0b","#7c6aff","#ff5f82","#00ffaa","#c084fc"];
+  for (let i = 0; i < 20; i++) {
+    setTimeout(() => {
+      const el = document.createElement("div");
+      el.className = "celebrate-particle";
+      el.style.left   = Math.random() * window.innerWidth + "px";
+      el.style.top    = (window.innerHeight * 0.6 + Math.random() * 100) + "px";
+      el.style.background = colors[Math.random() * colors.length | 0];
+      el.style.animationDelay = Math.random() * 0.3 + "s";
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1200);
+    }, i * 60);
+  }
+}
+
+// ══ MUSIC — YouTube IFrame API ═══════════════════════════════════════════════
+const SONGS = [
+  { title: "Gurenge – Demon Slayer",            id: "pmanD_s7G3U" },
+  { title: "Blue Bird – Naruto (piano)",         id: "FTrJ-J_lsr0" },
+  { title: "Guren no Yumiya – Attack on Titan",  id: "CID-sYQNCew" },
+  { title: "We Are! – One Piece (piano)",        id: "_iHe7-RhP1I" },
+  { title: "Unravel – Tokyo Ghoul (piano)",      id: "sEQf5lcnj_o" },
+  { title: "Crossing Field – SAO (piano)",       id: "IT8Wo8GGDGg" },
+  { title: "Again – Fullmetal Alchemist (piano)", id: "Kt_JePg86b8" },
+  { title: "Cruel Angel's Thesis – Eva (piano)", id: "aYe-2Glruu4" },
+  { title: "Specialz – Jujutsu Kaisen (piano)",  id: "ptnAeX39DFI" },
+  { title: "Idol – Oshi no Ko (piano)",          id: "lzSfnMp_DTs" },
+];
+
+let ytPlayer = null, songIndex = 0, musicOn = false;
+const failedSongs = new Set();
+
+const ytScript = document.createElement("script");
+ytScript.src = "https://www.youtube.com/iframe_api";
+document.head.appendChild(ytScript);
+
+window.onYouTubeIframeAPIReady = function () {
+  ytPlayer = new YT.Player("yt-container", {
+    height: "1", width: "1",
+    videoId: SONGS[0].id,
+    playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, rel: 0, origin: location.origin },
+    events: {
+      onStateChange: (e) => { if (e.data === YT.PlayerState.ENDED) nextSong(); },
+      onError: () => {
+        failedSongs.add(songIndex);
+        const titleEl = document.getElementById("music-title");
+        titleEl.textContent = "⚠ " + SONGS[songIndex].title + " — unavailable";
+        if (failedSongs.size >= SONGS.length) {
+          titleEl.textContent = "♪ No music available";
+          musicOn = false;
+          document.getElementById("music-play").textContent = "🎵";
+          return;
+        }
+        setTimeout(() => {
+          let next = (songIndex + 1) % SONGS.length;
+          let checked = 0;
+          while (failedSongs.has(next) && checked < SONGS.length) { next = (next + 1) % SONGS.length; checked++; }
+          songIndex = next;
+          if (musicOn) playCurrentSong(); else setSongTitle(songIndex);
+        }, 1500);
+      },
+    },
+  });
+};
+
+function setSongTitle(i) { document.getElementById("music-title").textContent = "♪ " + SONGS[i].title; }
+function playCurrentSong() {
+  if (!ytPlayer || !ytPlayer.loadVideoById) return;
+  ytPlayer.loadVideoById(SONGS[songIndex].id);
+  ytPlayer.setVolume(45);
+  setSongTitle(songIndex);
+  musicOn = true;
+  document.getElementById("music-play").textContent = "⏸";
+}
+function _findNext(from, step) {
+  let i = (from + step + SONGS.length) % SONGS.length, checked = 0;
+  while (failedSongs.has(i) && checked < SONGS.length) { i = (i + step + SONGS.length) % SONGS.length; checked++; }
+  return i;
+}
+function nextSong() { songIndex = _findNext(songIndex, 1); if (musicOn) playCurrentSong(); else setSongTitle(songIndex); }
+function prevSong() { songIndex = _findNext(songIndex, -1); if (musicOn) playCurrentSong(); else setSongTitle(songIndex); }
+
+document.getElementById("music-play").addEventListener("click", () => {
+  if (!ytPlayer || !ytPlayer.playVideo) return;
+  if (musicOn) { ytPlayer.pauseVideo(); musicOn = false; document.getElementById("music-play").textContent = "🎵"; }
+  else {
+    if (ytPlayer.getPlayerState() === -1 || ytPlayer.getPlayerState() === 5) playCurrentSong();
+    else { ytPlayer.playVideo(); musicOn = true; document.getElementById("music-play").textContent = "⏸"; }
+  }
+});
+document.getElementById("music-next").addEventListener("click", nextSong);
+document.getElementById("music-prev").addEventListener("click", prevSong);
+
+// ══ LOADING TIPS ══════════════════════════════════════════════════════════════
+const LOADING_TIPS = [
+  "Miss a question → your opponent gets a 5-second steal window.",
+  "3 correct answers in a row earns you a power-up: Shield → Snipe → Double Down.",
+  "🛡️ Shield blocks one steal attempt from your opponent.",
+  "🎯 Snipe forces your opponent's next question to be from YOUR anime.",
+  "✌️ Double Down makes your next successful steal worth 2 tokens.",
+  "5 wrong answers in a row = 1 GOT permanently burned by the contract.",
+  "Questions 36–40 are the Wild Card Round — a random anime neither player chose.",
+  "Win the duel → +5 GOT bonus minted directly to your wallet.",
+  "Spectators can bet GOT on who wins and earn a share of the total pool.",
+  "Rage quitting transfers half your tokens to your opponent and burns the rest.",
+  "Every question is uniquely generated by AI — no two games are the same.",
+];
+let tipIndex = 0, tipIv = null;
+
+function startLoadingTips() {
+  const el = document.getElementById("loading-tip");
+  if (!el) return;
+  tipIndex = Math.floor(Math.random() * LOADING_TIPS.length);
+  el.textContent = LOADING_TIPS[tipIndex];
+  tipIv = setInterval(() => {
+    tipIndex = (tipIndex + 1) % LOADING_TIPS.length;
+    el.style.opacity = 0;
+    setTimeout(() => {
+      el.textContent = LOADING_TIPS[tipIndex];
+      el.style.opacity = 1;
+    }, 300);
+  }, 5000);
+}
+function stopLoadingTips() { clearInterval(tipIv); tipIv = null; }
+
+// ══ MODAL ═════════════════════════════════════════════════════════════════════
+function openHelp() { document.getElementById("modal-overlay").classList.add("active"); }
+function closeHelp() { document.getElementById("modal-overlay").classList.remove("active"); }
+function closeHelpOutside(e) { if (e.target === document.getElementById("modal-overlay")) closeHelp(); }
+
+// ══ UTILS ════════════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  if (id === "screen-loading") startLoadingTips();
+  else stopLoadingTips();
+}
+
+let toastTimer = null;
+function toast(msg, type, ms = 3500) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "";
+  if (type === "warn")   el.classList.add("toast-warn");
+  if (type === "danger") el.classList.add("toast-danger");
+  if (type === "gold")   el.classList.add("toast-gold");
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), ms);
+}
+
+// ══ ANIME IMAGE ══════════════════════════════════════════════════════════════
+const imgCache = {};
+const debounce = {};
+
+function onAnimeType(prefix) {
+  const val = document.getElementById(`${prefix}-anime`).value.trim();
+  clearTimeout(debounce[prefix]);
+  if (val.length < 2) return;
+  debounce[prefix] = setTimeout(() => fetchCover(prefix, val), 750);
+}
+
+async function fetchCover(prefix, name) {
+  if (imgCache[name]) { setPreview(prefix, imgCache[name]); return; }
+  try {
+    const r = await fetch(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(name)}&limit=1&sfw=true`);
+    const d = await r.json();
+    const url = d.data?.[0]?.images?.jpg?.large_image_url;
+    if (url) { imgCache[name] = url; setPreview(prefix, url); }
+  } catch {}
+}
+
+function setPreview(prefix, url) {
+  const box = document.getElementById(`${prefix}-preview`);
+  if (box) box.innerHTML = `<img src="${url}" />`;
+}
+
+function setBgImage(elId, url) {
+  if (url) document.getElementById(elId).style.backgroundImage = `url('${url}')`;
+}
+
+// ══ GAME STATE ════════════════════════════════════════════════════════════════
+let myRole, myAddress, myAnime, oppAnime;
+let roomCode, questionNum, currentQ, stealQ;
+let myImg = null, oppImg = null;
+let answered = false;
+let timerIv = null, pollIv = null, waitIv = null, nextAdvanceTimer = null;
+let prevPollData = {};
+let windowRoomLeague = null;
+
+function reset() {
+  clearInterval(timerIv); clearInterval(pollIv); clearInterval(waitIv);
+  clearTimeout(nextAdvanceTimer);
+  timerIv = pollIv = waitIv = nextAdvanceTimer = null;
+  myRole = myAddress = myAnime = oppAnime = roomCode = currentQ = stealQ = null;
+  myImg = oppImg = null;
+  questionNum = 1; answered = false;
+  prevPollData = {};
+  windowRoomLeague = null;
+}
+
+function resetAndHome() { reset(); showScreen("screen-home"); }
+
+// ══ VS AI ═════════════════════════════════════════════════════════════════════
+let aiDifficulty = "easy";
+
+function selectDiff(diff) {
+  aiDifficulty = diff;
+  document.querySelectorAll(".diff-pill").forEach(p => {
+    p.classList.toggle("selected", p.dataset.diff === diff);
+  });
+}
+
+async function doCreateAI() {
+  const addr  = document.getElementById("ai-addr").value.trim();
+  const anime = document.getElementById("ai-anime").value.trim();
+  if (!addr || !anime) { toast("Fill in your address and anime!"); return; }
+
+  const btn = document.getElementById("ai-btn");
+  btn.disabled = true; btn.textContent = "Spawning AI opponent…";
+
+  try {
+    const r = await fetch("/api/create-room-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_address: addr, anime, difficulty: aiDifficulty }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+
+    myRole = "p1"; myAddress = addr; myAnime = anime;
+    roomCode = data.room_code;
+    myImg    = imgCache[anime] || null;
+    oppAnime = data.ai_anime;
+    oppImg   = imgCache[oppAnime] || null;
+
+    // Fetch opp image if not cached
+    if (!oppImg && oppAnime) {
+      fetchCover("_opp_", oppAnime).then(() => { oppImg = imgCache[oppAnime] || null; });
+    }
+
+    // Room is still "waiting" on-chain — show loading screen and poll until active
+    showScreen("screen-loading");
+    document.getElementById("loading-msg").textContent = `🤖 AI opponent (${oppAnime}) is joining the battle…`;
+    startLoadingTips();
+
+    waitIv = setInterval(async () => {
+      try {
+        const r2 = await fetch(`/api/poll/${roomCode}/p1`);
+        const d2 = await r2.json();
+        if (d2.status === "active") {
+          clearInterval(waitIv); waitIv = null;
+          toast(`🤖 ${oppAnime} has entered the arena! Good luck.`, "gold");
+          beginGame();
+        } else if (d2.status === "error") {
+          clearInterval(waitIv); waitIv = null;
+          toast("Failed to set up AI game — please try again.");
+          resetAndHome();
+        }
+      } catch {}
+    }, 3000);
+  } catch (e) {
+    toast("Error: " + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "🤖 FIGHT THE BOT";
+  }
+}
+
+// ══ CREATE ═══════════════════════════════════════════════════════════════════
+async function doCreate() {
+  const addr        = document.getElementById("c-addr").value.trim();
+  const anime       = document.getElementById("c-anime").value.trim();
+  const league_code = document.getElementById("c-league").value.trim().toUpperCase() || null;
+  if (!addr || !anime) { toast("Fill in all fields!"); return; }
+
+  const btn = document.getElementById("c-btn");
+  btn.disabled = true; btn.textContent = "Creating room…";
+
+  try {
+    const r = await fetch("/api/create-room", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ player_address: addr, anime, league_code }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+
+    myRole = "p1"; myAddress = addr; myAnime = anime;
+    roomCode = data.room_code;
+    myImg = imgCache[anime] || null;
+    windowRoomLeague = league_code;
+
+    document.getElementById("w-code").textContent = roomCode;
+    document.getElementById("w-anime-name").textContent = anime;
+    const wc = document.getElementById("w-cover");
+    if (myImg) wc.innerHTML = `<img src="${myImg}" />`;
+    else wc.innerHTML = `<span>No image</span>`;
+
+    showScreen("screen-waiting");
+    startWaitPoll();
+  } catch (e) {
+    toast("Error: " + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "⚔️ START DUEL";
+  }
+}
+
+function copyCode() {
+  navigator.clipboard.writeText(roomCode)
+    .then(() => toast("Code copied!"))
+    .catch(() => toast("Your code: " + roomCode));
+}
+
+function startWaitPoll() {
+  waitIv = setInterval(async () => {
+    try {
+      const r = await fetch(`/api/poll/${roomCode}/p1`);
+      const d = await r.json();
+      if (d.status === "active") {
+        clearInterval(waitIv);
+        oppAnime = d.p2_anime;
+        oppImg   = imgCache[oppAnime] || null;
+        if (!oppImg && oppAnime) { await fetchCover("_opp_", oppAnime); oppImg = imgCache[oppAnime] || null; }
+        beginGame();
+      }
+    } catch {}
+  }, 3000);
+}
+
+// ══ JOIN ══════════════════════════════════════════════════════════════════════
+async function doJoin() {
+  const code        = document.getElementById("j-code").value.trim().toUpperCase();
+  const addr        = document.getElementById("j-addr").value.trim();
+  const anime       = document.getElementById("j-anime").value.trim();
+  const league_code = document.getElementById("j-league").value.trim().toUpperCase() || null;
+  if (!code || !addr || !anime) { toast("Fill in all fields!"); return; }
+
+  const btn = document.getElementById("j-btn");
+  btn.disabled = true; btn.textContent = "Joining…";
+
+  try {
+    const r = await fetch("/api/join-room", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room_code: code, player_address: addr, anime, league_code }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+
+    myRole = "p2"; myAddress = addr; myAnime = anime;
+    roomCode = code;
+    myImg    = imgCache[anime] || null;
+    windowRoomLeague = league_code;
+
+    const pr = await fetch(`/api/poll/${code}/p2`);
+    const pd = await pr.json();
+    oppAnime = pd.p1_anime;
+    oppImg   = imgCache[oppAnime] || null;
+    if (!oppImg && oppAnime) { await fetchCover("_opp_", oppAnime); oppImg = imgCache[oppAnime] || null; }
+
+    beginGame();
+  } catch (e) {
+    toast("Error: " + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "🔗 JOIN DUEL";
+  }
+}
+
+// ══ GAME SETUP ════════════════════════════════════════════════════════════════
+function beginGame() {
+  showScreen("screen-loading");
+  document.getElementById("loading-msg").textContent = "Loading your first question…";
+
+  document.getElementById("g-room-code").textContent = roomCode;
+  document.getElementById("g-me-anime").textContent  = myAnime;
+  document.getElementById("g-opp-anime").textContent = oppAnime || "???";
+  if (myImg)  setBgImage("bg-me",  myImg);
+  if (oppImg) setBgImage("bg-opp", oppImg);
+
+  pollIv = setInterval(doPoll, 7000);
+  loadQuestion(1);
+}
+
+// ══ POLLING ═══════════════════════════════════════════════════════════════════
+async function doPoll() {
+  try {
+    const r = await fetch(`/api/poll/${roomCode}/${myRole}`);
+    const d = await r.json();
+    updateScoreUI(d);
+
+    if (!oppImg && d[myRole === "p1" ? "p2_anime" : "p1_anime"]) {
+      const newOppAnime = d[myRole === "p1" ? "p2_anime" : "p1_anime"];
+      if (newOppAnime && !oppImg) {
+        oppImg = imgCache[newOppAnime] || null;
+        if (oppImg) setBgImage("bg-opp", oppImg);
+      }
+    }
+
+    // ── Warning toasts ──────────────────────────────────────────────────────
+    if (d.myWrongStreak === 4)
+      toast("⚠️ 4 wrong in a row! ONE MORE = TOKEN BURN 🔥", "warn");
+    if (d.myWrongStreak >= 5)
+      toast("🔥 BURN! 1 GOT destroyed for 5 wrong streak", "danger");
+
+    if (d.myCorrectStreak > 0 && d.myCorrectStreak < 3)
+      toast(`${d.myCorrectStreak}/3 correct streak — power-up incoming! ⚡`);
+
+    if (prevPollData.myPU !== undefined && prevPollData.myPU !== d.myPU && d.myPU !== "")
+      toast(`⚡ Power-up earned: ${d.myPU.toUpperCase().replace("_"," ")}!`, "gold");
+
+    if (prevPollData.myBal != null && d.myBal < prevPollData.myBal)
+      toast(`💸 Lost ${prevPollData.myBal - d.myBal} GOT`, "danger");
+
+    if (d.myBal <= 5 && d.myBal > 0 && (prevPollData.myBal == null || prevPollData.myBal > 5))
+      toast(`⚠️ Low balance! Only ${d.myBal} GOT left`, "warn");
+
+    prevPollData = d;
+
+    if (d.status === "ended" || d.forfeit_reason) {
+      clearInterval(pollIv);
+      if (d.forfeit_reason && d.status === "ended") {
+        showEndScreen(d, d.winner, true);
+      } else {
+        showEndScreen(d, d.winner, false);
+      }
+    }
+  } catch {}
+}
+
+function updateScoreUI(d) {
+  if (!d) return;
+  const myBal  = myRole === "p1" ? d.p1_bal : d.p2_bal;
+  const oppBal = myRole === "p1" ? d.p2_bal : d.p1_bal;
+  const myQ    = myRole === "p1" ? d.p1_question : d.p2_question;
+  const oppQ   = myRole === "p1" ? d.p2_question : d.p1_question;
+  const myPU   = myRole === "p1" ? d.pu1 : d.pu2;
+  const oppPU  = myRole === "p1" ? d.pu2 : d.pu1;
+
+  if (myBal  != null) document.getElementById("g-me-bal").textContent  = myBal;
+  if (oppBal != null) document.getElementById("g-opp-bal").textContent = oppBal;
+  if (myQ)            document.getElementById("g-me-q").textContent    = myQ;
+  if (oppQ)           document.getElementById("g-opp-q").textContent   = oppQ;
+
+  const row = document.getElementById("pu-row");
+  if (row) {
+    const puLabel = { shield: "🛡️ SHIELD READY", double_down: "✌️ DOUBLE DOWN READY" };
+    const parts = [];
+    if (myPU === "snipe") {
+      parts.push(`<span class="pu-badge" style="cursor:pointer;background:rgba(239,68,68,0.15);border-color:#ef4444;color:#ef4444;" onclick="activateSnipe()">🎯 FIRE SNIPE — click to use</span>`);
+    } else if (myPU && puLabel[myPU]) {
+      parts.push(`<span class="pu-badge">YOU: ${puLabel[myPU]}</span>`);
+    }
+    if (oppPU === "snipe") {
+      parts.push(`<span class="pu-badge" style="border-color:var(--p2);color:var(--p2);">OPP: 🎯 SNIPE ARMED</span>`);
+    } else if (oppPU && puLabel[oppPU]) {
+      parts.push(`<span class="pu-badge" style="border-color:var(--p2);color:var(--p2);">OPP: ${puLabel[oppPU]}</span>`);
+    }
+    row.innerHTML = parts.join("");
+  }
+}
+
+// ══ QUESTION ══════════════════════════════════════════════════════════════════
+async function loadQuestion(num) {
+  questionNum = num; answered = false;
+  clearInterval(timerIv);
+  showScreen("screen-loading");
+
+  try {
+    const r = await fetch("/api/question", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room_code: roomCode, for_player: myRole, question_num: num }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+
+    // Sync gate: opponent hasn't finished the previous question yet
+    if (data.waiting) {
+      document.getElementById("loading-msg").textContent =
+        `Waiting for opponent to finish Q${data.opp_q + 1}…`;
+      setTimeout(() => loadQuestion(num), 4000);
+      return;
+    }
+
+    currentQ = data.question;
+    showScreen("screen-game");
+    renderQuestion(currentQ, num);
+    startTimer(15, false);
+  } catch (e) {
+    toast("Question error — retrying… " + e.message);
+    document.getElementById("loading-msg").textContent = "Error loading question. Retrying…";
+    setTimeout(() => loadQuestion(num), 5000);
+  }
+}
+
+function renderQuestion(q, num) {
+  document.getElementById("g-qnum").textContent   = num;
+  document.getElementById("g-me-q").textContent   = num;
+  document.getElementById("g-q-text").textContent = q.question;
+  document.getElementById("g-result").style.display = "none";
+
+  // Wild card round indicator — Q36+
+  const wcBanner = document.getElementById("wildcard-banner");
+  if (num >= 36) {
+    const wcAnime = q.wildcard_anime || "???";
+    wcBanner.textContent = `🃏 WILD CARD ROUND · Today's Anime: ${wcAnime.toUpperCase()}`;
+    wcBanner.style.display = "block";
+  } else {
+    wcBanner.style.display = "none";
+  }
+
+  const opts  = q.options || [q.option_a, q.option_b, q.option_c, q.option_d];
+  const keys  = ["A","B","C","D"];
+  const grid  = document.getElementById("g-opts");
+  grid.innerHTML = "";
+  opts.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    btn.className = "opt";
+    btn.innerHTML = `<span class="opt-key">${keys[i]}</span>${opt}`;
+    btn.onclick = () => doAnswer(opt, false, btn, "g-opts", "g-result");
+    grid.appendChild(btn);
+  });
+}
+
+// ══ TIMER ═════════════════════════════════════════════════════════════════════
+function startTimer(seconds, isSteal) {
+  const fillId = isSteal ? "steal-timer-fill" : "timer-fill";
+  const numId  = isSteal ? "steal-timer-num"  : "timer-num";
+  const fill   = document.getElementById(fillId);
+  const num    = document.getElementById(numId);
+  let left = seconds;
+
+  fill.style.width = "100%"; fill.classList.remove("urgent");
+  num.textContent = seconds;
+  clearInterval(timerIv);
+
+  timerIv = setInterval(() => {
+    left--;
+    const pct = (left / seconds) * 100;
+    fill.style.width = pct + "%";
+    num.textContent = left;
+    if (pct < 30) fill.classList.add("urgent");
+    if (left <= 0) {
+      clearInterval(timerIv);
+      if (isSteal) doAnswer("", true,  null, "steal-opts", "steal-result");
+      else         doAnswer("", false, null, "g-opts",     "g-result");
+    }
+  }, 1000);
+}
+
+// ══ ANSWER ════════════════════════════════════════════════════════════════════
+async function doAnswer(choice, isSteal, clickedBtn, gridId, bannerId) {
+  if (!isSteal && answered) return;
+  answered = true;
+  clearInterval(timerIv);
+
+  document.querySelectorAll(`#${gridId} .opt`).forEach(b => b.disabled = true);
+  if (clickedBtn) clickedBtn.classList.add("selected");
+
+  // Immediate feedback — chain can take 30-120s, don't leave player staring at nothing
+  const pendingBanner = document.getElementById(bannerId);
+  pendingBanner.className = "result-banner";
+  pendingBanner.style.cssText = "display:block; background:rgba(124,106,255,0.08); border:1px solid var(--p1); color:var(--p1);";
+  pendingBanner.innerHTML = `<div>⛓️ Verifying on-chain… <span id="pending-elapsed">0s</span></div>`;
+  let pendingStart = Date.now();
+  const pendingTick = setInterval(() => {
+    const el = document.getElementById("pending-elapsed");
+    if (el) el.textContent = Math.floor((Date.now() - pendingStart) / 1000) + "s";
+  }, 1000);
+
+  const qObj = isSteal ? stealQ : currentQ;
+
+  try {
+    const answerAbort = new AbortController();
+    const answerTimeout = setTimeout(() => answerAbort.abort(), 155_000); // 2.5 min client cap
+    const r = await fetch("/api/answer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        room_code:      roomCode,
+        question:       JSON.stringify(qObj),
+        player_answer:  choice,
+        is_steal:       isSteal,
+        player_address: myAddress,
+        player_role:    myRole,
+        question_num:   questionNum,
+      }),
+      signal: answerAbort.signal,
+    });
+    clearTimeout(answerTimeout);
+    const data = await r.json();
+    clearInterval(pendingTick);
+    if (!r.ok) throw new Error(data.error);
+
+    // Chain timed out or returned UNDETERMINED — treat as wrong and keep going
+    if (data.chain_error) {
+      pendingBanner.style.cssText = "";
+      toast("⚠️ Chain timeout — answer counted as wrong", "warn");
+      showResult("wrong", isSteal, clickedBtn, qObj, gridId, bannerId);
+      return;
+    }
+
+    // ── Answer feedback sounds + immediate toasts ──────────────────────────
+    const result = data.result;
+    if (result === "correct")          soundCorrect();
+    else if (result === "wrong_burn")  { soundBurn(); toast("🔥 TOKEN BURNED! 5 wrong in a row", "danger"); }
+    else if (result === "wrong")       soundWrong();
+    else if (result === "steal_blocked") { toast("🛡️ SHIELD blocked the steal!"); }
+    else if (result === "steal_success") { soundSteal(); toast("💰 Steal worked! +1 GOT", "gold"); }
+    else if (result === "steal_failed_burn") { soundBurn(); toast("🔥 Both missed — token burned"); }
+
+    // Reset banner style before showResult draws the real result
+    pendingBanner.style.cssText = "";
+    showResult(result, isSteal, clickedBtn, qObj, gridId, bannerId);
+  } catch (e) {
+    clearInterval(pendingTick);
+    toast("Answer error: " + e.message);
+    setTimeout(() => { if (isSteal) closeSteal(); else nextStep(); }, 2000);
+  }
+}
+
+const RESULT_MSG = {
+  correct:           "✅ CORRECT! Token secured.",
+  wrong:             "❌ WRONG! Opponent gets a steal window.",
+  wrong_burn:        "🔥 WRONG! Token burned — nobody gets it.",
+  steal_success:     "🔥 STEAL SUCCESS! Token snatched!",
+  steal_blocked:     "🛡️ BLOCKED! Opponent's shield held.",
+  steal_failed_burn: "🔥 STEAL FAILED! Token burned by contract.",
+};
+
+function showResult(result, isSteal, clickedBtn, qObj, gridId, bannerId) {
+  const banner = document.getElementById(bannerId);
+  const isGood = result === "correct" || result === "steal_success";
+  const isFire = result.includes("steal") || result.includes("burn");
+  banner.className = `result-banner ${isGood ? "ok" : isFire ? "fire" : "bad"}`;
+  banner.innerHTML = `<div>${RESULT_MSG[result] || result}</div><button class="next-btn">NEXT →</button>`;
+  banner.style.display = "block";
+
+  highlightAnswer(qObj, clickedBtn, gridId);
+
+  const advance = () => {
+    clearTimeout(nextAdvanceTimer);
+    nextAdvanceTimer = null;
+    banner.querySelector(".next-btn").disabled = true;
+    if (isSteal) { closeSteal(); nextStep(); } else { nextStep(); }
+  };
+
+  banner.querySelector(".next-btn").addEventListener("click", advance, { once: true });
+  clearTimeout(nextAdvanceTimer);
+  nextAdvanceTimer = setTimeout(advance, 2600);
+}
+
+function highlightAnswer(q, clickedBtn, gridId) {
+  if (!q) return;
+  const correctIdx = q.answer ? "ABCD".indexOf(q.answer.toUpperCase()) : -1;
+  document.querySelectorAll(`#${gridId} .opt`).forEach((btn, i) => {
+    btn.classList.remove("selected");
+    if (i === correctIdx)        btn.classList.add("correct");
+    else if (btn === clickedBtn) btn.classList.add("wrong");
+  });
+}
+
+// ══ SNIPE ═════════════════════════════════════════════════════════════════════
+async function activateSnipe() {
+  try {
+    const r = await fetch("/api/use-snipe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room_code: roomCode, player_address: myAddress }),
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error);
+    toast("🎯 SNIPE FIRED! Opponent's next question is from your anime.");
+  } catch (e) {
+    toast("Snipe error: " + e.message);
+  }
+}
+
+// ══ STEAL ═════════════════════════════════════════════════════════════════════
+function openSteal(stealData) {
+  stealQ = stealData.question;
+  document.getElementById("steal-q-text").textContent = stealQ.question;
+
+  const opts = stealQ.options || [stealQ.option_a, stealQ.option_b, stealQ.option_c, stealQ.option_d];
+  const keys = ["A","B","C","D"];
+  const grid = document.getElementById("steal-opts");
+  grid.innerHTML = "";
+  opts.forEach((opt, i) => {
+    const btn = document.createElement("button");
+    btn.className = "opt";
+    btn.innerHTML = `<span class="opt-key">${keys[i]}</span>${opt}`;
+    btn.onclick = () => { clearInterval(timerIv); doAnswer(opt, true, btn, "steal-opts", "steal-result"); };
+    grid.appendChild(btn);
+  });
+
+  document.getElementById("steal-result").style.display = "none";
+  document.getElementById("steal-overlay").classList.add("active");
+  startTimer(5, true);
+}
+
+function closeSteal() {
+  document.getElementById("steal-overlay").classList.remove("active");
+  clearInterval(timerIv);
+  stealQ = null;
+}
+
+// ══ FLOW ══════════════════════════════════════════════════════════════════════
+async function nextStep() {
+  try {
+    const r = await fetch(`/api/poll/${roomCode}/${myRole}`);
+    const d = await r.json();
+    updateScoreUI(d);
+
+    if (d.steal_available) { openSteal(d.steal_available); return; }
+
+    if (d.status === "ended" || d.forfeit_reason) {
+      clearInterval(pollIv);
+      showEndScreen(d, d.winner, d.forfeit_reason);
+      return;
+    }
+  } catch {}
+
+  // 40-question game
+  if (questionNum >= 40) { triggerEnd(); return; }
+
+  showScreen("screen-loading");
+  document.getElementById("loading-msg").textContent = `Loading question ${questionNum + 1}…`;
+  loadQuestion(questionNum + 1);
+}
+
+// ══ END GAME ══════════════════════════════════════════════════════════════════
+async function triggerEnd() {
+  clearInterval(pollIv);
+  showScreen("screen-loading");
+  document.getElementById("loading-msg").textContent = "Calculating results…";
+
+  // Poll until both players have answered Q40, then finalize
+  for (let attempt = 0; attempt < 72; attempt++) {
+    try {
+      const r = await fetch("/api/end-game", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_code: roomCode, player_address: myAddress }),
+      });
+      const data = await r.json();
+
+      if (data.waiting) {
+        const oppQ = myRole === "p1" ? data.q2 : data.q1;
+        document.getElementById("loading-msg").textContent =
+          `You finished! Waiting for opponent… (Q${oppQ}/40)`;
+        await new Promise(res => setTimeout(res, 5000));
+        continue;
+      }
+
+      if (!r.ok) throw new Error(data.error);
+
+      const pr = await fetch(`/api/poll/${roomCode}/${myRole}`);
+      const pd = await pr.json();
+      showEndScreen(pd, data.result, false);
+      return;
+    } catch (e) {
+      toast("Waiting for results… " + e.message);
+      await new Promise(res => setTimeout(res, 5000));
+    }
+  }
+
+  // Timeout fallback — show whatever state we have
+  toast("Taking too long — showing current results");
+  try {
+    const pr = await fetch(`/api/poll/${roomCode}/${myRole}`);
+    const pd = await pr.json();
+    showEndScreen(pd, pd.winner, false);
+  } catch { showEndScreen(null, null, false); }
+}
+
+async function showEndScreen(pollData, winner, isForfeit) {
+  clearInterval(pollIv);
+  showScreen("screen-end");
+
+  const myBal  = pollData ? (myRole === "p1" ? pollData.p1_bal  : pollData.p2_bal)  : null;
+  const oppBal = pollData ? (myRole === "p1" ? pollData.p2_bal  : pollData.p1_bal)  : null;
+  const myDelta  = myBal  != null ? myBal  - 20 : null;
+  const oppDelta = oppBal != null ? oppBal - 20 : null;
+
+  document.getElementById("end-me-val").textContent  = myBal  ?? "?";
+  document.getElementById("end-opp-val").textContent = oppBal ?? "?";
+
+  // Delta display
+  const meDeltaEl  = document.getElementById("end-me-delta");
+  const oppDeltaEl = document.getElementById("end-opp-delta");
+  if (myDelta != null) {
+    meDeltaEl.textContent = (myDelta >= 0 ? "+" : "") + myDelta + " GOT";
+    meDeltaEl.className   = "end-delta " + (myDelta >= 0 ? "pos" : "neg");
+  }
+  if (oppDelta != null) {
+    oppDeltaEl.textContent = (oppDelta >= 0 ? "+" : "") + oppDelta + " GOT";
+    oppDeltaEl.className   = "end-delta " + (oppDelta >= 0 ? "pos" : "neg");
+  }
+
+  const isTie  = winner === "tie" || !winner;
+  const myAddr = pollData ? (myRole === "p1" ? pollData.p1_address : pollData.p2_address) : null;
+  const iWon   = !isTie && (winner === myAddress || winner === myAddr ||
+                  (winner && winner.includes(myAddress)));
+
+  const resEl = document.getElementById("end-result-text");
+  const subEl = document.getElementById("end-sub");
+
+  if (isForfeit && iWon) {
+    resEl.className = "end-result win"; resEl.textContent = "🏆 VICTORY!";
+    subEl.textContent = "🏃 Opponent disconnected — you win!";
+    document.getElementById("end-me").classList.add("winner");
+    launchCelebrate();
+  } else if (isTie) {
+    resEl.className = "end-result tie"; resEl.textContent = "🤝 TIE!";
+    subEl.textContent = "Both warriors fought with equal honor.";
+  } else if (iWon) {
+    resEl.className = "end-result win"; resEl.textContent = "🏆 VICTORY!";
+    subEl.textContent = `${myAnime} reigns supreme! +5 GOT bonus minted.`;
+    document.getElementById("end-me").classList.add("winner");
+    launchCelebrate();
+  } else {
+    resEl.className = "end-result lose"; resEl.textContent = "💀 DEFEAT";
+    subEl.textContent = "Train harder and return stronger.";
+    document.getElementById("end-opp").classList.add("winner");
+  }
+
+  const winImg = iWon || isTie ? myImg : oppImg;
+  if (winImg) {
+    const img = document.getElementById("end-img");
+    img.src = winImg; img.style.display = "block";
+  }
+
+  // ── League rank fetch ───────────────────────────────────────────────────
+  if (windowRoomLeague && myAddress) {
+    try {
+      const lr = await fetch(`/api/league/${windowRoomLeague}`);
+      if (lr.ok) {
+        const ld = await lr.json();
+        const rank = ld.standings.findIndex(s => s.address === myAddress);
+        if (rank >= 0) {
+          const medals = ["🥇","🥈","🥉"];
+          const medal  = medals[rank] || `#${rank + 1}`;
+          document.getElementById("end-league-rank").textContent =
+            `${medal} League Rank: ${rank + 1} / ${ld.standings.length} in ${ld.name}`;
+          document.getElementById("end-league-rank").style.display = "block";
+        }
+      }
+    } catch {}
+  }
+}
+</script>
+</body>
+</html>

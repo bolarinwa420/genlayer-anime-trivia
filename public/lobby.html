@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ANIME TRIVIA DUEL — Live Lobby</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #07071a;
+      --card:   #0e0e2a;
+      --border: #1e1e4a;
+      --p1:     #7c6aff;
+      --p2:     #ff5f82;
+      --gold:   #f59e0b;
+      --text:   #e8e8ff;
+      --muted:  #7070a0;
+    }
+
+    body {
+      background-image:
+        linear-gradient(rgba(7,7,26,0.82), rgba(7,7,26,0.88)),
+        url('frieren.webp');
+      background-size: cover; background-position: center;
+      background-attachment: fixed; background-color: var(--bg);
+      color: var(--text); font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh; padding: 24px 16px;
+    }
+
+    /* ── GenLayer badge ── */
+    #gl-badge {
+      position: fixed; bottom: 20px; left: 20px; z-index: 100;
+      display: flex; align-items: center; gap: 6px; text-decoration: none;
+      background: rgba(10,10,30,0.85); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 30px; padding: 7px 13px; backdrop-filter: blur(10px); transition: border-color 0.2s;
+    }
+    #gl-badge:hover { border-color: var(--p1); }
+    #gl-badge img { width: 24px; height: 24px; object-fit: contain; filter: invert(1) brightness(2); }
+    #gl-badge span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+    .header { text-align: center; margin-bottom: 36px; }
+    .title {
+      font-family: 'Orbitron', sans-serif; font-size: clamp(22px, 4vw, 40px);
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--p1), var(--p2), var(--gold));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: 2px; margin-bottom: 6px;
+    }
+    .subtitle { color: var(--muted); font-size: 13px; letter-spacing: 3px; text-transform: uppercase; }
+
+    .action-bar {
+      display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px;
+    }
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 12px 24px; border: none; border-radius: 10px;
+      font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 1px; text-decoration: none;
+    }
+    .btn-p1 { background: linear-gradient(135deg, var(--p1), #5b4bd4); color: white; }
+    .btn-p1:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,106,255,0.4); }
+    .btn-p2 { background: linear-gradient(135deg, var(--p2), #cc3366); color: white; }
+    .btn-p2:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,95,130,0.4); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--p1); color: var(--text); }
+
+    .section-label {
+      font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+    }
+    .section-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+    #rooms-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px; max-width: 1100px; margin: 0 auto;
+    }
+
+    .room-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px; transition: border-color 0.2s;
+    }
+    .room-card:hover { border-color: var(--p1); }
+    .room-card.active  { border-left: 3px solid var(--p1); }
+    .room-card.waiting { border-left: 3px solid var(--gold); }
+
+    .room-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .room-code {
+      font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 900;
+      color: var(--p1); letter-spacing: 4px;
+    }
+    .room-status {
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 20px; font-weight: 700;
+    }
+    .room-status.active  { background: rgba(124,106,255,0.15); color: var(--p1); border: 1px solid var(--p1); }
+    .room-status.waiting { background: rgba(245,158,11,0.15);  color: var(--gold); border: 1px solid var(--gold); }
+
+    .room-players {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    }
+    .player-block { flex: 1; }
+    .player-anime {
+      font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700;
+      margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .player-block.p1 .player-anime { color: var(--p1); }
+    .player-block.p2 .player-anime { color: var(--p2); }
+    .player-score { font-size: 20px; font-weight: 700; }
+    .player-q { font-size: 11px; color: var(--muted); }
+    .vs-badge {
+      font-family: 'Orbitron', sans-serif; font-size: 12px; color: var(--gold);
+      font-weight: 900; min-width: 30px; text-align: center;
+    }
+
+    .bet-pool {
+      display: flex; gap: 8px; margin-bottom: 14px; font-size: 12px;
+    }
+    .bet-pill {
+      flex: 1; text-align: center; padding: 5px 8px; border-radius: 8px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    }
+    .bet-pill .bet-amt { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; }
+    .bet-pill.p1 .bet-amt { color: var(--p1); }
+    .bet-pill.p2 .bet-amt { color: var(--p2); }
+    .bet-pill .bet-lbl { color: var(--muted); font-size: 10px; }
+
+    .room-actions { display: flex; gap: 8px; }
+    .room-actions .btn { flex: 1; font-size: 11px; padding: 10px; justify-content: center; }
+
+    #empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+    #empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+    #empty-state p { font-size: 15px; }
+
+    .refresh-bar {
+      text-align: center; margin-top: 24px;
+      font-size: 12px; color: var(--muted); letter-spacing: 1px;
+    }
+    #refresh-countdown { color: var(--p1); font-family: 'Orbitron', sans-serif; }
+
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    .dot-live {
+      display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      background: #00ffaa; margin-right: 6px; animation: pulse 1.4s infinite;
+    }
+  </style>
+</head>
+<body>
+
+<a href="https://genlayer.com" target="_blank" id="gl-badge">
+  <img src="genlayer-logo.jpg" alt="GenLayer" />
+  <span>Powered by GenLayer</span>
+</a>
+
+<div class="header">
+  <div class="title">ANIME TRIVIA DUEL</div>
+  <div class="subtitle"><span class="dot-live"></span>Live Lobby — Watch &amp; Bet on Active Duels</div>
+</div>
+
+<div class="action-bar">
+  <a href="index.html" class="btn btn-p1">⚔️ CREATE DUEL</a>
+  <a href="index.html" class="btn btn-p2">🔗 JOIN DUEL</a>
+  <a href="league.html" class="btn btn-gold">🏆 LEAGUES</a>
+</div>
+
+<div style="max-width:1100px; margin:0 auto;">
+  <div class="section-label">Active &amp; Waiting Rooms</div>
+  <div id="rooms-grid"></div>
+  <div id="empty-state" style="display:none;">
+    <div class="icon">🎌</div>
+    <p>No active duels right now.<br>Be the first to create one!</p>
+  </div>
+</div>
+
+<div class="refresh-bar">
+  Auto-refreshing in <span id="refresh-countdown">5</span>s &nbsp;·&nbsp;
+  <span style="cursor:pointer; color:var(--p1);" onclick="fetchLobby()">Refresh now</span>
+</div>
+
+<script>
+async function fetchLobby() {
+  try {
+    const r = await fetch("/api/lobby");
+    const { rooms } = await r.json();
+    renderRooms(rooms || []);
+  } catch (err) {
+    console.error("Lobby fetch error:", err);
+  }
+}
+
+async function fetchSpectateData(room_code) {
+  try {
+    const r = await fetch(`/api/spectate/${room_code}`);
+    return await r.json();
+  } catch { return null; }
+}
+
+async function renderRooms(rooms) {
+  const grid  = document.getElementById("rooms-grid");
+  const empty = document.getElementById("empty-state");
+
+  if (rooms.length === 0) {
+    grid.innerHTML  = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+
+  // Fetch live data for each active room in parallel
+  const details = await Promise.all(
+    rooms.map(r => r.status === "active" ? fetchSpectateData(r.room_code) : Promise.resolve(null))
+  );
+
+  grid.innerHTML = rooms.map((room, i) => {
+    const d = details[i];
+    const p1Bal = d ? d.p1_bal : 20;
+    const p2Bal = d ? d.p2_bal : 20;
+    const p1Q   = d ? d.p1_question : 0;
+    const p2Q   = d ? d.p2_question : 0;
+    const bp1   = d ? d.bets_p1 : 0;
+    const bp2   = d ? d.bets_p2 : 0;
+    const p2Anime = room.p2_anime || "Waiting for opponent…";
+
+    return `
+      <div class="room-card ${room.status}">
+        <div class="room-header">
+          <span class="room-code">${room.room_code}</span>
+          <span class="room-status ${room.status}">${room.status === "active" ? "⚔️ LIVE" : "⏳ WAITING"}</span>
+        </div>
+
+        <div class="room-players">
+          <div class="player-block p1">
+            <div class="player-anime">${room.p1_anime}</div>
+            <div class="player-score">💎 ${p1Bal}</div>
+            <div class="player-q">Q${p1Q}/40</div>
+          </div>
+          <div class="vs-badge">VS</div>
+          <div class="player-block p2" style="text-align:right;">
+            <div class="player-anime">${p2Anime}</div>
+            <div class="player-score" style="color:var(--p2);">💎 ${p2Bal}</div>
+            <div class="player-q">Q${p2Q}/40</div>
+          </div>
+        </div>
+
+        ${room.status === "active" ? `
+        <div class="bet-pool">
+          <div class="bet-pill p1">
+            <div class="bet-lbl">BET POOL — P1</div>
+            <div class="bet-amt">${bp1} GOT</div>
+          </div>
+          <div class="bet-pill p2">
+            <div class="bet-lbl">BET POOL — P2</div>
+            <div class="bet-amt">${bp2} GOT</div>
+          </div>
+        </div>` : ""}
+
+        <div class="room-actions">
+          <a href="spectate.html?room=${room.room_code}" class="btn btn-ghost">👀 Watch &amp; Bet</a>
+          ${room.status === "waiting" ? `<a href="index.html" class="btn btn-p2">🔗 Join This Room</a>` : ""}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// Auto-refresh countdown
+let countdown = 5;
+function tick() {
+  countdown--;
+  document.getElementById("refresh-countdown").textContent = countdown;
+  if (countdown <= 0) {
+    countdown = 5;
+    fetchLobby();
+  }
+}
+
+fetchLobby();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

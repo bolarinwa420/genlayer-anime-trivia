@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ANIME TRIVIA DUEL — Leagues</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:     #07071a; --card:   #0e0e2a; --border: #1e1e4a;
+      --p1:     #7c6aff; --p2:     #ff5f82; --gold:   #f59e0b;
+      --text:   #e8e8ff; --muted:  #7070a0; --correct: #00ffaa;
+    }
+
+    body {
+      background-image:
+        linear-gradient(rgba(7,7,26,0.82), rgba(7,7,26,0.88)),
+        url('https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1920&q=80');
+      background-size: cover; background-position: center;
+      background-attachment: fixed; background-color: var(--bg);
+      color: var(--text); font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh; padding: 24px 16px;
+    }
+
+    /* ── GenLayer badge ── */
+    #gl-badge {
+      position: fixed; bottom: 20px; left: 20px; z-index: 100;
+      display: flex; align-items: center; gap: 6px; text-decoration: none;
+      background: rgba(10,10,30,0.85); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 30px; padding: 7px 13px; backdrop-filter: blur(10px); transition: border-color 0.2s;
+    }
+    #gl-badge:hover { border-color: var(--p1); }
+    #gl-badge img { width: 24px; height: 24px; object-fit: contain; filter: invert(1) brightness(2); }
+    #gl-badge span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+      background: #1a1a3a; border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 22px; z-index: 200; transition: transform 0.3s ease;
+      font-size: 14px; white-space: nowrap; pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    .header { text-align: center; margin-bottom: 32px; }
+    .title {
+      font-family: 'Orbitron', sans-serif; font-size: clamp(22px, 4vw, 38px);
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--p1), var(--p2), var(--gold));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: 2px; margin-bottom: 6px;
+    }
+    .subtitle { color: var(--muted); font-size: 13px; letter-spacing: 3px; text-transform: uppercase; }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px; color: var(--muted);
+      font-size: 13px; text-decoration: none; margin-bottom: 24px;
+    }
+    .back-link:hover { color: var(--text); }
+
+    .layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; max-width: 1100px; margin: 0 auto; }
+    @media (max-width: 800px) { .layout { grid-template-columns: 1fr; } }
+
+    .card {
+      background: rgba(14,14,42,0.9); border: 1px solid var(--border);
+      border-radius: 16px; padding: 22px; margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+    }
+    .card-title {
+      font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 16px;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 12px 20px; border: none; border-radius: 10px;
+      font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 1px; text-decoration: none;
+    }
+    .btn-p1 { background: linear-gradient(135deg, var(--p1), #5b4bd4); color: white; }
+    .btn-p1:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,106,255,0.4); }
+    .btn-p2 { background: linear-gradient(135deg, var(--p2), #cc3366); color: white; }
+    .btn-p2:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,95,130,0.4); }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), #d97706); color: #1a1000; }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,0.4); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--p1); color: var(--text); }
+    .btn-full { width: 100%; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+    .input-group { margin-bottom: 14px; }
+    .input-group label { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .input-group input {
+      width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: 8px; padding: 11px 14px; color: var(--text);
+      font-family: 'Rajdhani', sans-serif; font-size: 15px; transition: border-color 0.2s;
+    }
+    .input-group input:focus { outline: none; border-color: var(--p1); }
+    .input-group input::placeholder { color: var(--muted); }
+
+    /* ── League selector pills ── */
+    #league-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .league-pill {
+      padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px;
+      font-size: 12px; cursor: pointer; transition: all 0.15s; background: rgba(255,255,255,0.03);
+    }
+    .league-pill:hover, .league-pill.active { border-color: var(--p1); color: var(--p1); background: rgba(124,106,255,0.1); }
+
+    /* ── Standings table ── */
+    .standings-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    }
+    .league-meta { font-size: 12px; color: var(--muted); }
+    .league-meta strong { color: var(--text); }
+
+    .standings-table { width: 100%; border-collapse: collapse; }
+    .standings-table th {
+      text-align: left; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--border);
+    }
+    .standings-table td {
+      padding: 12px 10px; border-bottom: 1px solid rgba(30,30,74,0.5); font-size: 14px;
+    }
+    .standings-table tr:last-child td { border-bottom: none; }
+    .standings-table tr:hover td { background: rgba(124,106,255,0.05); }
+
+    .rank-num { font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 700; }
+    .rank-1 { color: var(--gold); }
+    .rank-2 { color: #a8a8c8; }
+    .rank-3 { color: #cd7f32; }
+
+    .addr-short { font-family: monospace; font-size: 13px; color: var(--muted); }
+    .net-pos { color: var(--correct); font-weight: 700; }
+    .net-neg { color: var(--wrong); font-weight: 700; }
+
+    .share-row { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
+    .code-display {
+      font-family: 'Orbitron', sans-serif; font-size: 18px; letter-spacing: 4px;
+      color: var(--p1); background: rgba(124,106,255,0.1);
+      border: 1px solid var(--p1); border-radius: 10px; padding: 8px 16px; flex: 1;
+      text-align: center;
+    }
+
+    .expiry-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 10px; letter-spacing: 1px; background: rgba(245,158,11,0.12);
+      border: 1px solid var(--gold); color: var(--gold); text-transform: uppercase;
+    }
+    .week-badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px;
+      font-size: 10px; letter-spacing: 1px; background: rgba(124,106,255,0.12);
+      border: 1px solid var(--p1); color: var(--p1); text-transform: uppercase; margin-left: 8px;
+    }
+
+    .refresh-bar { text-align: center; margin-top: 16px; font-size: 12px; color: var(--muted); }
+    #refresh-cd { color: var(--p1); font-family: 'Orbitron', sans-serif; }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .animate-in { animation: fadeIn 0.3s ease; }
+  </style>
+</head>
+<body>
+<div id="toast"></div>
+
+<a href="https://genlayer.com" target="_blank" id="gl-badge">
+  <img src="genlayer-logo.jpg" alt="GenLayer" />
+  <span>Powered by GenLayer</span>
+</a>
+
+<div style="max-width:1100px; margin:0 auto;">
+  <a href="lobby.html" class="back-link">← Back to Lobby</a>
+
+  <div class="header">
+    <div class="title">🏆 LEAGUE STANDINGS</div>
+    <div class="subtitle">Weekly competitive rankings · On-chain records</div>
+  </div>
+
+  <div class="layout">
+    <!-- LEFT: Create + Join -->
+    <div>
+      <!-- Create League -->
+      <div class="card">
+        <div class="card-title">⚡ Create New League</div>
+        <div class="input-group">
+          <label>League Code (4+ chars, unique)</label>
+          <input id="new-code" type="text" placeholder="OTAKU2026" maxlength="12" style="text-transform:uppercase; font-family:'Orbitron',sans-serif; letter-spacing:3px;" />
+        </div>
+        <div class="input-group">
+          <label>League Name</label>
+          <input id="new-name" type="text" placeholder="e.g. Tokyo Duel Society" />
+        </div>
+        <div class="input-group">
+          <label>Your Wallet Address</label>
+          <input id="new-addr" type="text" placeholder="0x..." />
+        </div>
+        <button class="btn btn-p1 btn-full" id="create-btn" onclick="doCreate()">⚡ CREATE LEAGUE</button>
+      </div>
+
+      <!-- Join League -->
+      <div class="card">
+        <div class="card-title">🔗 Join Existing League</div>
+        <div class="input-group">
+          <label>League Code</label>
+          <input id="join-code" type="text" placeholder="OTAKU2026" maxlength="12" style="text-transform:uppercase; font-family:'Orbitron',sans-serif; letter-spacing:3px;" />
+        </div>
+        <div class="input-group">
+          <label>Your Wallet Address</label>
+          <input id="join-addr" type="text" placeholder="0x..." />
+        </div>
+        <button class="btn btn-p2 btn-full" id="join-btn" onclick="doJoin()">🔗 JOIN LEAGUE</button>
+      </div>
+
+      <!-- Known leagues -->
+      <div class="card">
+        <div class="card-title">📋 Active Leagues</div>
+        <div id="league-pills"><div class="empty-state">No leagues yet — create one!</div></div>
+        <div class="input-group" style="margin-top:8px;">
+          <label>Or lookup any code directly</label>
+          <div style="display:flex; gap:8px;">
+            <input id="lookup-code" type="text" placeholder="OTAKU2026" style="text-transform:uppercase;" />
+            <button class="btn btn-ghost" onclick="lookupLeague()" style="white-space:nowrap;">Look up</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Standings -->
+    <div>
+      <div class="card" id="standings-card">
+        <div class="standings-header">
+          <div>
+            <div class="card-title" style="margin-bottom:4px;">STANDINGS</div>
+            <div id="standings-meta" class="league-meta"></div>
+          </div>
+          <div id="share-section" style="display:none;">
+            <div class="share-row">
+              <div class="code-display" id="share-code">—</div>
+              <button class="btn btn-ghost" onclick="copyCode()" style="padding:10px 14px;">📋</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="standings-wrap">
+          <div class="empty-state">Select a league from the left to view standings.</div>
+        </div>
+      </div>
+
+      <div class="refresh-bar">
+        Auto-refreshing in <span id="refresh-cd">15</span>s &nbsp;·&nbsp;
+        <span style="cursor:pointer; color:var(--p1);" onclick="if(currentLeagueCode) loadStandings(currentLeagueCode)">Refresh now</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentLeagueCode = null;
+let toastTimer = null;
+
+function toast(msg, ms = 3500) {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), ms);
+}
+
+function makeCode() {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+// ── Create League ──────────────────────────────────────────────────────────
+async function doCreate() {
+  let code  = document.getElementById("new-code").value.trim().toUpperCase();
+  const name = document.getElementById("new-name").value.trim();
+  const addr = document.getElementById("new-addr").value.trim();
+
+  if (!code || !name || !addr) { toast("Fill in all fields!"); return; }
+  if (code.length < 4)        { toast("Code must be at least 4 characters."); return; }
+
+  const btn = document.getElementById("create-btn");
+  btn.disabled = true; btn.textContent = "Creating…";
+
+  try {
+    const r = await fetch("/api/league/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ league_code: code, name, creator_address: addr }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+
+    toast(`✅ League "${name}" created! Code: ${code}`);
+    document.getElementById("new-code").value = "";
+    document.getElementById("new-name").value = "";
+    document.getElementById("new-addr").value = "";
+    fetchLeagueList();
+    loadStandings(code);
+  } catch (err) {
+    toast("Error: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "⚡ CREATE LEAGUE";
+  }
+}
+
+// ── Join League ────────────────────────────────────────────────────────────
+async function doJoin() {
+  const code = document.getElementById("join-code").value.trim().toUpperCase();
+  const addr = document.getElementById("join-addr").value.trim();
+
+  if (!code || !addr) { toast("Fill in all fields!"); return; }
+
+  const btn = document.getElementById("join-btn");
+  btn.disabled = true; btn.textContent = "Joining…";
+
+  try {
+    const r = await fetch("/api/league/join", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ league_code: code, member_address: addr }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+
+    toast(`✅ Joined league ${code}!`);
+    document.getElementById("join-code").value = "";
+    document.getElementById("join-addr").value = "";
+    loadStandings(code);
+  } catch (err) {
+    toast("Error: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "🔗 JOIN LEAGUE";
+  }
+}
+
+// ── Lookup ─────────────────────────────────────────────────────────────────
+function lookupLeague() {
+  const code = document.getElementById("lookup-code").value.trim().toUpperCase();
+  if (!code) { toast("Enter a league code."); return; }
+  loadStandings(code);
+}
+
+// ── Fetch league list ──────────────────────────────────────────────────────
+async function fetchLeagueList() {
+  try {
+    const r = await fetch("/api/leagues");
+    const d = await r.json();
+    const pills = document.getElementById("league-pills");
+    if (!d.leagues || d.leagues.length === 0) {
+      pills.innerHTML = `<div class="empty-state">No leagues yet — create one!</div>`;
+      return;
+    }
+    pills.innerHTML = d.leagues.map(l =>
+      `<div class="league-pill ${l.league_code === currentLeagueCode ? 'active' : ''}"
+            onclick="loadStandings('${l.league_code}')">${l.name || l.league_code}</div>`
+    ).join("");
+  } catch {}
+}
+
+// ── Load standings ─────────────────────────────────────────────────────────
+async function loadStandings(code) {
+  currentLeagueCode = code;
+  document.getElementById("standings-wrap").innerHTML = `<div class="empty-state">Loading…</div>`;
+
+  // Highlight active pill
+  document.querySelectorAll(".league-pill").forEach(p => {
+    p.classList.toggle("active", p.textContent.trim() === code || p.onclick?.toString().includes(code));
+  });
+
+  try {
+    const r = await fetch(`/api/league/${code}`);
+    if (!r.ok) {
+      const d = await r.json();
+      throw new Error(d.error || "Not found");
+    }
+    const d = await r.json();
+
+    // Meta
+    const createdAt   = d.created_at ? new Date(d.created_at * 1000) : new Date();
+    const weekNum     = Math.floor((Date.now() / 1000 - (d.created_at || 0)) / (7 * 86400)) + 1;
+    const expiresAt   = new Date((d.created_at || Date.now() / 1000) * 1000 + 7 * 86400000);
+    const daysLeft    = Math.max(0, Math.ceil((expiresAt - Date.now()) / 86400000));
+
+    document.getElementById("standings-meta").innerHTML =
+      `<strong>${d.name}</strong> &nbsp;
+       <span class="week-badge">Week ${weekNum}</span>
+       <span class="expiry-badge">${daysLeft}d left</span>
+       &nbsp;<span style="font-size:11px;">${d.member_count} member${d.member_count !== 1 ? "s" : ""}</span>`;
+
+    // Share section
+    document.getElementById("share-section").style.display = "block";
+    document.getElementById("share-code").textContent = code;
+
+    // Standings table
+    if (!d.standings || d.standings.length === 0) {
+      document.getElementById("standings-wrap").innerHTML =
+        `<div class="empty-state">No members yet.</div>`;
+      return;
+    }
+
+    const medals = ["🥇","🥈","🥉"];
+    const rankClass = ["rank-1","rank-2","rank-3"];
+
+    const rows = d.standings.map((s, i) => {
+      const medal  = medals[i] || "";
+      const rClass = rankClass[i] || "";
+      const netCls = s.tokens_earned >= 0 ? "net-pos" : "net-neg";
+      const netStr = (s.tokens_earned >= 0 ? "+" : "") + s.tokens_earned;
+      return `
+        <tr class="animate-in">
+          <td><span class="rank-num ${rClass}">${medal || (i + 1)}</span></td>
+          <td><span class="addr-short">${s.short_addr}</span></td>
+          <td>${s.wins}</td>
+          <td>${s.losses}</td>
+          <td>${s.games}</td>
+          <td class="${netCls}">${netStr} GOT</td>
+        </tr>
+      `;
+    }).join("");
+
+    document.getElementById("standings-wrap").innerHTML = `
+      <table class="standings-table">
+        <thead>
+          <tr>
+            <th>Rank</th>
+            <th>Wallet</th>
+            <th>W</th>
+            <th>L</th>
+            <th>GP</th>
+            <th>Net GOT</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  } catch (err) {
+    document.getElementById("standings-wrap").innerHTML =
+      `<div class="empty-state">⚠️ ${err.message}</div>`;
+  }
+}
+
+function copyCode() {
+  const code = document.getElementById("share-code").textContent.trim();
+  navigator.clipboard.writeText(code)
+    .then(() => toast(`Code "${code}" copied!`))
+    .catch(() => toast("Your code: " + code));
+}
+
+// ── Auto-refresh countdown ─────────────────────────────────────────────────
+let countdown = 15;
+function tick() {
+  countdown--;
+  document.getElementById("refresh-cd").textContent = countdown;
+  if (countdown <= 0) {
+    countdown = 15;
+    fetchLeagueList();
+    if (currentLeagueCode) loadStandings(currentLeagueCode);
+  }
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+fetchLeagueList();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>

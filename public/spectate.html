@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ANIME TRIVIA DUEL — Spectate</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #07071a; --card:   #0e0e2a; --border: #1e1e4a;
+      --p1:      #7c6aff; --p2:     #ff5f82; --gold:   #f59e0b;
+      --correct: #00ffaa; --wrong:  #ff4444; --steal:  #ff9f43;
+      --text:    #e8e8ff; --muted:  #7070a0;
+    }
+
+    body {
+      background-image:
+        linear-gradient(rgba(7,7,26,0.82), rgba(7,7,26,0.88)),
+        url('frieren.webp');
+      background-size: cover; background-position: center;
+      background-attachment: fixed; background-color: var(--bg);
+      color: var(--text); font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh; padding: 20px 16px;
+    }
+
+    /* ── GenLayer badge ── */
+    #gl-badge {
+      position: fixed; bottom: 20px; left: 20px; z-index: 100;
+      display: flex; align-items: center; gap: 6px; text-decoration: none;
+      background: rgba(10,10,30,0.85); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 30px; padding: 7px 13px; backdrop-filter: blur(10px); transition: border-color 0.2s;
+    }
+    #gl-badge:hover { border-color: var(--p1); }
+    #gl-badge img { width: 24px; height: 24px; object-fit: contain; filter: invert(1) brightness(2); }
+    #gl-badge span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+    /* ── HEADER ── */
+    .page-header { text-align: center; margin-bottom: 24px; }
+    .page-title {
+      font-family: 'Orbitron', sans-serif; font-size: clamp(16px, 3vw, 26px);
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--p1), var(--p2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: 2px; margin-bottom: 4px;
+    }
+    .room-label { color: var(--muted); font-size: 12px; letter-spacing: 3px; }
+    .room-label span { color: var(--p1); font-family: 'Orbitron', sans-serif; }
+
+    .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; text-decoration: none; margin-bottom: 20px; }
+    .back-link:hover { color: var(--text); }
+
+    /* ── GRID ── */
+    .layout { display: grid; grid-template-columns: 1fr 320px; gap: 16px; max-width: 1000px; margin: 0 auto; }
+    @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+
+    /* ── PANELS ── */
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px; margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 14px;
+    }
+
+    .player-panels { display: flex; gap: 10px; margin-bottom: 0; }
+    .player-panel {
+      flex: 1; border-radius: 12px; border: 2px solid transparent;
+      padding: 14px; position: relative; overflow: hidden;
+    }
+    .panel-p1 { border-color: var(--p1); }
+    .panel-p2 { border-color: var(--p2); }
+    .panel-role { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+    .panel-anime { font-family: 'Orbitron', sans-serif; font-size: 12px; font-weight: 700; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .panel-p1 .panel-anime { color: var(--p1); }
+    .panel-p2 .panel-anime { color: var(--p2); }
+    .panel-bal { font-size: 24px; font-weight: 700; }
+    .panel-q { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .panel-pu { font-size: 11px; margin-top: 6px; color: var(--gold); }
+    .vs-sep { display: flex; align-items: center; font-family: 'Orbitron', sans-serif; font-size: 13px; font-weight: 900; color: var(--gold); padding: 0 4px; }
+
+    /* ── STATUS ── */
+    .status-badge {
+      display: inline-block; padding: 4px 12px; border-radius: 20px;
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; margin-bottom: 12px;
+    }
+    .status-badge.active   { background: rgba(124,106,255,0.15); color: var(--p1); border: 1px solid var(--p1); }
+    .status-badge.waiting  { background: rgba(245,158,11,0.15);  color: var(--gold); border: 1px solid var(--gold); }
+    .status-badge.finished { background: rgba(0,255,170,0.1);    color: var(--correct); border: 1px solid var(--correct); }
+
+    /* ── EVENTS FEED ── */
+    #events-feed { list-style: none; max-height: 280px; overflow-y: auto; }
+    #events-feed li {
+      padding: 8px 10px; border-bottom: 1px solid var(--border);
+      font-size: 13px; display: flex; align-items: flex-start; gap: 8px;
+    }
+    #events-feed li:last-child { border-bottom: none; }
+    #events-feed li .ts { font-size: 10px; color: var(--muted); white-space: nowrap; margin-left: auto; }
+    .event-ok    { color: var(--correct); }
+    .event-bad   { color: var(--wrong); }
+    .event-fire  { color: var(--steal); }
+    .event-snipe { color: #c084fc; }
+    .no-events   { color: var(--muted); font-size: 13px; padding: 16px 10px; text-align: center; }
+
+    /* ── BETTING ── */
+    .input-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: flex-end; }
+    .input-group { flex: 1; }
+    .input-group label { display: block; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .input-group input {
+      width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; color: var(--text);
+      font-family: 'Rajdhani', sans-serif; font-size: 15px; transition: border-color 0.2s;
+    }
+    .input-group input:focus { outline: none; border-color: var(--p1); }
+    .input-group input::placeholder { color: var(--muted); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 16px; border: none; border-radius: 10px;
+      font-family: 'Orbitron', sans-serif; font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 1px;
+    }
+    .btn-p1 { background: linear-gradient(135deg, var(--p1), #5b4bd4); color: white; }
+    .btn-p1:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(124,106,255,0.4); }
+    .btn-p2 { background: linear-gradient(135deg, var(--p2), #cc3366); color: white; }
+    .btn-p2:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,95,130,0.4); }
+    .btn-gold { background: linear-gradient(135deg, var(--gold), #d97706); color: #1a1000; }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,0.4); }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--p1); color: var(--text); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+    .btn-full { width: 100%; }
+
+    .bet-buttons { display: flex; gap: 8px; margin-top: 8px; }
+    .bet-buttons .btn { flex: 1; }
+
+    .bet-pool-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .pool-bar {
+      flex: 1; text-align: center; padding: 10px; border-radius: 10px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    }
+    .pool-bar .pool-amt { font-family: 'Orbitron', sans-serif; font-size: 18px; font-weight: 700; }
+    .pool-bar.p1 .pool-amt { color: var(--p1); }
+    .pool-bar.p2 .pool-amt { color: var(--p2); }
+    .pool-bar .pool-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+
+    .my-bet-info {
+      background: rgba(124,106,255,0.08); border: 1px solid var(--p1);
+      border-radius: 10px; padding: 12px; font-size: 13px; margin-bottom: 12px;
+    }
+    .my-bet-info strong { color: var(--p1); }
+
+    .balance-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; font-size: 13px;
+    }
+    .balance-row .bal { font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--gold); font-weight: 700; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+      background: #1a1a3a; border: 1px solid var(--border); border-radius: 12px;
+      padding: 10px 22px; z-index: 200; transition: transform 0.3s ease;
+      font-size: 14px; white-space: nowrap; pointer-events: none;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+    .dot-live { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #00ffaa; margin-right: 5px; animation: pulse 1.4s infinite; }
+
+    .winner-banner {
+      text-align: center; padding: 14px; border-radius: 12px; margin-bottom: 14px;
+      background: rgba(245,158,11,0.1); border: 1px solid var(--gold);
+      font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 900; color: var(--gold);
+    }
+  </style>
+</head>
+<body>
+<div id="toast"></div>
+
+<a href="https://genlayer.com" target="_blank" id="gl-badge">
+  <img src="genlayer-logo.jpg" alt="GenLayer" />
+  <span>Powered by GenLayer</span>
+</a>
+
+<div style="max-width:1000px; margin:0 auto;">
+  <a href="lobby.html" class="back-link">← Back to Lobby</a>
+
+  <div class="page-header">
+    <div class="page-title">⚔️ SPECTATING</div>
+    <div class="room-label">ROOM: <span id="room-label">—</span></div>
+  </div>
+
+  <div class="layout">
+    <!-- LEFT: Game State -->
+    <div>
+      <!-- Status + Winner banner -->
+      <div id="status-badge-wrap" style="margin-bottom:14px;"></div>
+      <div id="winner-banner" class="winner-banner" style="display:none;"></div>
+
+      <!-- Player panels -->
+      <div class="card" style="padding:16px;">
+        <div class="card-title">Live Score</div>
+        <div class="player-panels">
+          <div class="player-panel panel-p1">
+            <div class="panel-role">PLAYER 1</div>
+            <div class="panel-anime" id="s-anime1">—</div>
+            <div class="panel-bal">💎 <span id="s-bal1">20</span> GOT</div>
+            <div class="panel-q">Q<span id="s-q1">0</span>/40</div>
+            <div class="panel-pu" id="s-pu1"></div>
+          </div>
+          <div class="vs-sep">VS</div>
+          <div class="player-panel panel-p2">
+            <div class="panel-role">PLAYER 2</div>
+            <div class="panel-anime" id="s-anime2">—</div>
+            <div class="panel-bal" style="color:var(--p2);">💎 <span id="s-bal2">20</span> GOT</div>
+            <div class="panel-q">Q<span id="s-q2">0</span>/40</div>
+            <div class="panel-pu" id="s-pu2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Events feed -->
+      <div class="card">
+        <div class="card-title"><span class="dot-live"></span>Live Events</div>
+        <ul id="events-feed">
+          <li class="no-events">Waiting for game action…</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- RIGHT: Betting -->
+    <div>
+      <div class="card">
+        <div class="card-title">💰 Place Your Bet</div>
+
+        <!-- Bet pools -->
+        <div class="bet-pool-row">
+          <div class="pool-bar p1">
+            <div class="pool-amt" id="pool1">0</div>
+            <div class="pool-lbl">P1 Pool</div>
+          </div>
+          <div class="pool-bar p2">
+            <div class="pool-amt" id="pool2">0</div>
+            <div class="pool-lbl">P2 Pool</div>
+          </div>
+        </div>
+
+        <!-- Wallet -->
+        <div class="input-row">
+          <div class="input-group">
+            <label>Your Wallet Address</label>
+            <input id="bettor-addr" type="text" placeholder="0x..." oninput="onAddrChange()" />
+          </div>
+        </div>
+
+        <!-- Balance + Airdrop -->
+        <div class="balance-row">
+          <span>Your Balance:</span>
+          <span class="bal"><span id="bettor-bal">—</span> GOT</span>
+        </div>
+        <button class="btn btn-ghost btn-full" id="airdrop-btn" onclick="claimAirdrop()" style="margin-bottom:12px;">
+          🎁 Claim 10 GOT Airdrop (once per wallet)
+        </button>
+
+        <!-- Existing bet or bet form -->
+        <div id="my-bet-section">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Claim winnings (shown after game ends) -->
+      <div class="card" id="claim-card" style="display:none;">
+        <div class="card-title">🏆 Claim Winnings</div>
+        <p style="font-size:13px; color:var(--muted); margin-bottom:14px;">The game is over. Claim your payout below.</p>
+        <button class="btn btn-gold btn-full" onclick="claimWinnings()">Claim My Winnings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const params   = new URLSearchParams(location.search);
+const roomCode = params.get("room");
+if (!roomCode) { document.body.innerHTML = "<p style='color:red;padding:20px'>No room code in URL. Add ?room=XXXXXX</p>"; }
+
+document.getElementById("room-label").textContent = roomCode;
+
+let gameData    = null;
+let myBetData   = null; // { side, amount, claimed }
+let bettorAddr  = "";
+let gameStatus  = "";
+let seenEventTs = 0;
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+let toastTimer = null;
+function toast(msg, ms = 3500) {
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), ms);
+}
+
+// ── Addr input ────────────────────────────────────────────────────────────
+function onAddrChange() {
+  bettorAddr = document.getElementById("bettor-addr").value.trim();
+  if (bettorAddr.length >= 10) {
+    fetchBalance();
+    fetchMyBet();
+  }
+}
+
+async function fetchBalance() {
+  if (!bettorAddr) return;
+  try {
+    const r = await fetch(`/api/balance/${bettorAddr}`);
+    const d = await r.json();
+    document.getElementById("bettor-bal").textContent = d.balance ?? "?";
+  } catch {}
+}
+
+async function fetchMyBet() {
+  if (!bettorAddr || !roomCode) return;
+  try {
+    const r = await fetch(`/api/bettor/${roomCode}/${bettorAddr}`);
+    const d = await r.json();
+    myBetData = d.bet;
+    renderBetSection();
+  } catch {}
+}
+
+// ── Bet section renderer ──────────────────────────────────────────────────
+function renderBetSection() {
+  const section  = document.getElementById("my-bet-section");
+  const finished = gameStatus === "finished" || gameStatus === "ended";
+
+  if (myBetData) {
+    const sideColor = myBetData.side === "p1" ? "var(--p1)" : "var(--p2)";
+    section.innerHTML = `
+      <div class="my-bet-info">
+        You bet <strong>${myBetData.amount} GOT</strong> on
+        <strong style="color:${sideColor}">PLAYER ${myBetData.side.toUpperCase()}</strong>
+        ${myBetData.claimed ? "· <span style='color:var(--correct)'>Claimed ✓</span>" : ""}
+      </div>
+    `;
+    if (finished && !myBetData.claimed) {
+      document.getElementById("claim-card").style.display = "block";
+    }
+    return;
+  }
+
+  if (finished) {
+    section.innerHTML = `<p style="color:var(--muted);font-size:13px;">Betting closed — game has ended.</p>`;
+    return;
+  }
+
+  section.innerHTML = `
+    <div class="input-row">
+      <div class="input-group">
+        <label>Bet Amount (max 10 GOT)</label>
+        <input id="bet-amount" type="number" min="1" max="10" value="5" placeholder="5" />
+      </div>
+    </div>
+    <div class="bet-buttons">
+      <button class="btn btn-p1" onclick="placeBet('p1')">Bet on P1 ▲</button>
+      <button class="btn btn-p2" onclick="placeBet('p2')">Bet on P2 ▲</button>
+    </div>
+  `;
+}
+
+// ── Airdrop ───────────────────────────────────────────────────────────────
+async function claimAirdrop() {
+  if (!bettorAddr) { toast("Enter your wallet address first."); return; }
+  const btn = document.getElementById("airdrop-btn");
+  btn.disabled = true; btn.textContent = "Claiming…";
+  try {
+    const r = await fetch("/api/spectator-airdrop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bettor_address: bettorAddr }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    toast("🎁 10 GOT airdropped to your wallet!");
+    fetchBalance();
+  } catch (err) {
+    toast("Airdrop error: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = "🎁 Claim 10 GOT Airdrop (once per wallet)";
+  }
+}
+
+// ── Place Bet ─────────────────────────────────────────────────────────────
+async function placeBet(side) {
+  if (!bettorAddr) { toast("Enter your wallet address first."); return; }
+  const amtEl = document.getElementById("bet-amount");
+  const amount = amtEl ? Number(amtEl.value) : 5;
+  if (!amount || amount < 1 || amount > 10) { toast("Amount must be 1–10 GOT."); return; }
+
+  try {
+    const r = await fetch("/api/bet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room_code: roomCode, bettor_address: bettorAddr, side, amount }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    toast(`✅ Bet placed! ${amount} GOT on Player ${side.toUpperCase()}`);
+    fetchMyBet();
+    fetchBalance();
+    poll();
+  } catch (err) {
+    toast("Bet error: " + err.message);
+  }
+}
+
+// ── Claim Winnings ────────────────────────────────────────────────────────
+async function claimWinnings() {
+  if (!bettorAddr) { toast("Enter your wallet address first."); return; }
+  try {
+    const r = await fetch("/api/claim", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ room_code: roomCode, bettor_address: bettorAddr }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    if (d.payout > 0) {
+      toast(`🏆 Claimed ${d.payout} GOT!`);
+    } else {
+      toast("Nothing to claim — you bet on the losing side.");
+    }
+    fetchMyBet();
+    fetchBalance();
+    document.getElementById("claim-card").style.display = "none";
+  } catch (err) {
+    toast("Claim error: " + err.message);
+  }
+}
+
+// ── Event feed renderer ───────────────────────────────────────────────────
+const EVENT_ICON = {
+  correct:           "✅",
+  wrong:             "❌",
+  wrong_burn:        "🔥",
+  steal_success:     "⚡",
+  steal_blocked:     "🛡️",
+  steal_failed_burn: "💀",
+  snipe_used:        "🎯",
+  timeout:           "⏱️",
+  forfeit:           "🏃",
+};
+const EVENT_MSG = {
+  correct:           (p) => `Player ${p} answered correctly!`,
+  wrong:             (p) => `Player ${p} missed — steal window open!`,
+  wrong_burn:        (p) => `Player ${p} hit 5 misses — token burned!`,
+  steal_success:     (p) => `Player ${p} STOLE a token!`,
+  steal_blocked:     (p) => `Steal blocked by Player ${p === "p1" ? "P2" : "P1"}'s shield!`,
+  steal_failed_burn: (p) => `Steal by Player ${p} failed — token burned!`,
+  snipe_used:        (p) => `Player ${p} fired SNIPE — opponent's next Q is from their anime!`,
+  timeout:           (p) => `Player ${p} timed out — auto-miss!`,
+  forfeit:           (p) => `Player ${p === "p1" ? "P2" : "P1"} disconnected — ${p} wins by forfeit!`,
+};
+const EVENT_CLASS = {
+  correct: "event-ok", wrong: "event-bad", wrong_burn: "event-fire",
+  steal_success: "event-fire", steal_blocked: "event-ok",
+  steal_failed_burn: "event-fire", snipe_used: "event-snipe",
+  timeout: "event-bad", forfeit: "event-fire",
+};
+
+function timeSince(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return `${s}s ago`;
+  return `${Math.floor(s/60)}m ago`;
+}
+
+function renderEvents(events) {
+  const feed = document.getElementById("events-feed");
+  if (!events || events.length === 0) {
+    feed.innerHTML = `<li class="no-events">No events yet. Game hasn't started or nothing has happened.</li>`;
+    return;
+  }
+  const p1Label = gameData?.p1_anime || "P1";
+  const p2Label = gameData?.p2_anime || "P2";
+
+  feed.innerHTML = [...events].reverse().map(e => {
+    const pLabel = e.player === "p1" ? p1Label : p2Label;
+    const icon   = EVENT_ICON[e.type]    || "•";
+    const msg    = EVENT_MSG[e.type]     ? EVENT_MSG[e.type](pLabel) : e.type;
+    const cls    = EVENT_CLASS[e.type]   || "";
+    return `<li class="${cls}"><span>${icon}</span><span>${msg}</span><span class="ts">${timeSince(e.ts)}</span></li>`;
+  }).join("");
+}
+
+// ── Powerup label ─────────────────────────────────────────────────────────
+const PU_LABEL = { shield: "🛡️ Shield", snipe: "🎯 Snipe", double_down: "✌️ Double Down" };
+
+// ── Main poll ─────────────────────────────────────────────────────────────
+async function poll() {
+  if (!roomCode) return;
+  try {
+    const r = await fetch(`/api/spectate/${roomCode}`);
+    gameData  = await r.json();
+    gameStatus = gameData.status;
+
+    // Status badge
+    const badgeWrap = document.getElementById("status-badge-wrap");
+    const statusMap = { active: "⚔️ LIVE", waiting: "⏳ WAITING", finished: "🏁 FINISHED", ended: "🏁 FINISHED" };
+    badgeWrap.innerHTML = `<span class="status-badge ${gameStatus}">${statusMap[gameStatus] || gameStatus}</span>`;
+
+    // Winner banner
+    const wb = document.getElementById("winner-banner");
+    if ((gameStatus === "finished" || gameStatus === "ended") && gameData.winner) {
+      wb.style.display = "block";
+      if (gameData.winner === "tie") {
+        wb.textContent = "🤝 IT'S A TIE! Both bets returned.";
+      } else if (gameData.forfeit_reason) {
+        const winAnime = gameData.winner === gameData.p1_address ? gameData.p1_anime : gameData.p2_anime;
+        wb.textContent = `🏃 GAME ENDED BY FORFEIT — Winner: ${winAnime || gameData.winner.slice(0,8)}`;
+        wb.style.borderColor = "var(--steal)";
+        wb.style.color = "var(--steal)";
+      } else {
+        const winAnime = gameData.winner === gameData.p1_address ? gameData.p1_anime : gameData.p2_anime;
+        wb.textContent = `🏆 WINNER: ${winAnime || gameData.winner.slice(0,8)}`;
+      }
+    }
+
+    // Scores
+    document.getElementById("s-anime1").textContent = gameData.p1_anime || "—";
+    document.getElementById("s-anime2").textContent = gameData.p2_anime || "Waiting…";
+    document.getElementById("s-bal1").textContent   = gameData.p1_bal ?? 20;
+    document.getElementById("s-bal2").textContent   = gameData.p2_bal ?? 20;
+    document.getElementById("s-q1").textContent     = gameData.p1_question ?? 0;
+    document.getElementById("s-q2").textContent     = gameData.p2_question ?? 0;
+
+    // Powerups
+    const pu1El = document.getElementById("s-pu1");
+    const pu2El = document.getElementById("s-pu2");
+    pu1El.textContent = PU_LABEL[gameData.pu1] || "";
+    pu2El.textContent = PU_LABEL[gameData.pu2] || "";
+
+    // Bet pools
+    document.getElementById("pool1").textContent = gameData.bets_p1 ?? 0;
+    document.getElementById("pool2").textContent = gameData.bets_p2 ?? 0;
+
+    // Events
+    renderEvents(gameData.events || []);
+
+    // Refresh bet section if game ended
+    if (bettorAddr && (gameStatus === "finished" || gameStatus === "ended")) {
+      fetchMyBet();
+      renderBetSection();
+    }
+  } catch (err) {
+    console.warn("Poll error:", err.message);
+  }
+}
+
+// Auto-poll
+poll();
+setInterval(poll, 4000);
+
+// Refresh balance periodically if addr entered
+setInterval(() => { if (bettorAddr) fetchBalance(); }, 8000);
+</script>
+</body>
+</html>
